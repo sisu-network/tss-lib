@@ -131,6 +131,79 @@ func (x *PresignRound1Message2) GetCommitment() []byte {
 	return nil
 }
 
+//
+// Represents a P2P message sent to each party during Round 2 of the ECDSA TSS presigning protocol.
+type PresignRound2Message struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	C1         []byte   `protobuf:"bytes,1,opt,name=c1,proto3" json:"c1,omitempty"`
+	C2         []byte   `protobuf:"bytes,2,opt,name=c2,proto3" json:"c2,omitempty"`
+	ProofBob   [][]byte `protobuf:"bytes,3,rep,name=proof_bob,json=proofBob,proto3" json:"proof_bob,omitempty"`
+	ProofBobWc [][]byte `protobuf:"bytes,4,rep,name=proof_bob_wc,json=proofBobWc,proto3" json:"proof_bob_wc,omitempty"`
+}
+
+func (x *PresignRound2Message) Reset() {
+	*x = PresignRound2Message{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ecdsa_presign_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PresignRound2Message) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PresignRound2Message) ProtoMessage() {}
+
+func (x *PresignRound2Message) ProtoReflect() protoreflect.Message {
+	mi := &file_ecdsa_presign_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PresignRound2Message.ProtoReflect.Descriptor instead.
+func (*PresignRound2Message) Descriptor() ([]byte, []int) {
+	return file_ecdsa_presign_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PresignRound2Message) GetC1() []byte {
+	if x != nil {
+		return x.C1
+	}
+	return nil
+}
+
+func (x *PresignRound2Message) GetC2() []byte {
+	if x != nil {
+		return x.C2
+	}
+	return nil
+}
+
+func (x *PresignRound2Message) GetProofBob() [][]byte {
+	if x != nil {
+		return x.ProofBob
+	}
+	return nil
+}
+
+func (x *PresignRound2Message) GetProofBobWc() [][]byte {
+	if x != nil {
+		return x.ProofBobWc
+	}
+	return nil
+}
+
 var File_ecdsa_presign_proto protoreflect.FileDescriptor
 
 var file_ecdsa_presign_proto_rawDesc = []byte{
@@ -144,8 +217,16 @@ var file_ecdsa_presign_proto_rawDesc = []byte{
 	0x69, 0x67, 0x6e, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x31, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
 	0x32, 0x12, 0x1e, 0x0a, 0x0a, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x6d, 0x65, 0x6e, 0x74, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0a, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x6d, 0x65, 0x6e,
-	0x74, 0x42, 0x0f, 0x5a, 0x0d, 0x65, 0x63, 0x64, 0x73, 0x61, 0x2f, 0x70, 0x72, 0x65, 0x73, 0x69,
-	0x67, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x74, 0x22, 0x75, 0x0a, 0x14, 0x50, 0x72, 0x65, 0x73, 0x69, 0x67, 0x6e, 0x52, 0x6f, 0x75, 0x6e,
+	0x64, 0x32, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x63, 0x31, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x02, 0x63, 0x31, 0x12, 0x0e, 0x0a, 0x02, 0x63, 0x32, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x02, 0x63, 0x32, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x72, 0x6f,
+	0x6f, 0x66, 0x5f, 0x62, 0x6f, 0x62, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x08, 0x70, 0x72,
+	0x6f, 0x6f, 0x66, 0x42, 0x6f, 0x62, 0x12, 0x20, 0x0a, 0x0c, 0x70, 0x72, 0x6f, 0x6f, 0x66, 0x5f,
+	0x62, 0x6f, 0x62, 0x5f, 0x77, 0x63, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x0a, 0x70, 0x72,
+	0x6f, 0x6f, 0x66, 0x42, 0x6f, 0x62, 0x57, 0x63, 0x42, 0x0f, 0x5a, 0x0d, 0x65, 0x63, 0x64, 0x73,
+	0x61, 0x2f, 0x70, 0x72, 0x65, 0x73, 0x69, 0x67, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
@@ -160,10 +241,11 @@ func file_ecdsa_presign_proto_rawDescGZIP() []byte {
 	return file_ecdsa_presign_proto_rawDescData
 }
 
-var file_ecdsa_presign_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_ecdsa_presign_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_ecdsa_presign_proto_goTypes = []interface{}{
 	(*PresignRound1Message1)(nil), // 0: PresignRound1Message1
 	(*PresignRound1Message2)(nil), // 1: PresignRound1Message2
+	(*PresignRound2Message)(nil),  // 2: PresignRound2Message
 }
 var file_ecdsa_presign_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -203,6 +285,18 @@ func file_ecdsa_presign_proto_init() {
 				return nil
 			}
 		}
+		file_ecdsa_presign_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PresignRound2Message); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -210,7 +304,7 @@ func file_ecdsa_presign_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ecdsa_presign_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

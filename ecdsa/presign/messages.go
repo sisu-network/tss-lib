@@ -44,6 +44,14 @@ func (m *PresignRound1Message1) ValidateBasic() bool {
 		common.NonEmptyMultiBytes(m.GetRangeProofAlice(), mta.RangeProofAliceBytesParts)
 }
 
+func (m *PresignRound1Message1) UnmarshalC() *big.Int {
+	return new(big.Int).SetBytes(m.GetC())
+}
+
+func (m *PresignRound1Message1) UnmarshalRangeProofAlice() (*mta.RangeProofAlice, error) {
+	return mta.RangeProofAliceFromBytes(m.GetRangeProofAlice())
+}
+
 // ----- //
 
 func NewSignRound1Message2(
@@ -68,4 +76,46 @@ func (m *PresignRound1Message2) ValidateBasic() bool {
 
 func (m *PresignRound1Message2) UnmarshalCommitment() *big.Int {
 	return new(big.Int).SetBytes(m.GetCommitment())
+}
+
+// ----- //
+
+func NewSignRound2Message(
+	to, from *tss.PartyID,
+	c1Ji *big.Int,
+	pi1Ji *mta.ProofBob,
+	c2Ji *big.Int,
+	pi2Ji *mta.ProofBobWC,
+) tss.ParsedMessage {
+	meta := tss.MessageRouting{
+		From:        from,
+		To:          []*tss.PartyID{to},
+		IsBroadcast: false,
+	}
+	pfBob := pi1Ji.Bytes()
+	pfBobWC := pi2Ji.Bytes()
+	content := &PresignRound2Message{
+		C1:         c1Ji.Bytes(),
+		C2:         c2Ji.Bytes(),
+		ProofBob:   pfBob[:],
+		ProofBobWc: pfBobWC[:],
+	}
+	msg := tss.NewMessageWrapper(meta, content)
+	return tss.NewMessage(meta, content, msg)
+}
+
+func (m *PresignRound2Message) ValidateBasic() bool {
+	return m != nil &&
+		common.NonEmptyBytes(m.C1) &&
+		common.NonEmptyBytes(m.C2) &&
+		common.NonEmptyMultiBytes(m.ProofBob, mta.ProofBobBytesParts) &&
+		common.NonEmptyMultiBytes(m.ProofBobWc, mta.ProofBobWCBytesParts)
+}
+
+func (m *PresignRound2Message) UnmarshalProofBob() (*mta.ProofBob, error) {
+	return mta.ProofBobFromBytes(m.ProofBob)
+}
+
+func (m *PresignRound2Message) UnmarshalProofBobWC() (*mta.ProofBobWC, error) {
+	return mta.ProofBobWCFromBytes(m.ProofBobWc)
 }

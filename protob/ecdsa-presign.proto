@@ -16,3 +16,13 @@ message PresignRound1Message1 {
  message PresignRound1Message2 {
   bytes commitment = 1;
 }
+
+/*
+ * Represents a P2P message sent to each party during Round 2 of the ECDSA TSS presigning protocol.
+ */
+ message PresignRound2Message {
+  bytes c1 = 1;
+  bytes c2 = 2;
+  repeated bytes proof_bob = 3;
+  repeated bytes proof_bob_wc = 4;
+}
