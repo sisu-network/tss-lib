@@ -33,3 +33,14 @@ message PresignRound1Message1 {
  message PresignRound3Message {
   bytes theta = 1;
 }
+
+/*
+ * Represents a BROADCAST message sent to all parties during Round 4 of the ECDSA TSS presigning protocol.
+ */
+ message PresignRound4Message {
+  repeated bytes de_commitment = 1;
+  bytes proof_alpha_x = 2;
+  bytes proof_alpha_y = 3;
+  bytes proof_t = 4;
+}
+

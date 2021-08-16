@@ -3,7 +3,9 @@ package presign
 import (
 	"math/big"
 
+	"github.com/sisu-network/tss-lib/crypto"
 	cmt "github.com/sisu-network/tss-lib/crypto/commitments"
+	"github.com/sisu-network/tss-lib/crypto/schnorr"
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto/mta"
@@ -140,4 +142,53 @@ func NewSignRound3Message(
 func (m *PresignRound3Message) ValidateBasic() bool {
 	return m != nil &&
 		common.NonEmptyBytes(m.Theta)
+}
+
+// ----- //
+
+func NewSignRound4Message(
+	from *tss.PartyID,
+	deCommitment cmt.HashDeCommitment,
+	proof *schnorr.ZKProof,
+) tss.ParsedMessage {
+	meta := tss.MessageRouting{
+		From:        from,
+		IsBroadcast: true,
+	}
+	dcBzs := common.BigIntsToBytes(deCommitment)
+	content := &PresignRound4Message{
+		DeCommitment: dcBzs,
+		ProofAlphaX:  proof.Alpha.X().Bytes(),
+		ProofAlphaY:  proof.Alpha.Y().Bytes(),
+		ProofT:       proof.T.Bytes(),
+	}
+	msg := tss.NewMessageWrapper(meta, content)
+	return tss.NewMessage(meta, content, msg)
+}
+
+func (m *PresignRound4Message) ValidateBasic() bool {
+	return m != nil &&
+		common.NonEmptyMultiBytes(m.DeCommitment, 3) &&
+		common.NonEmptyBytes(m.ProofAlphaX) &&
+		common.NonEmptyBytes(m.ProofAlphaY) &&
+		common.NonEmptyBytes(m.ProofT)
+}
+
+func (m *PresignRound4Message) UnmarshalDeCommitment() []*big.Int {
+	deComBzs := m.GetDeCommitment()
+	return cmt.NewHashDeCommitmentFromBytes(deComBzs)
+}
+
+func (m *PresignRound4Message) UnmarshalZKProof() (*schnorr.ZKProof, error) {
+	point, err := crypto.NewECPoint(
+		tss.EC(),
+		new(big.Int).SetBytes(m.GetProofAlphaX()),
+		new(big.Int).SetBytes(m.GetProofAlphaY()))
+	if err != nil {
+		return nil, err
+	}
+	return &schnorr.ZKProof{
+		Alpha: point,
+		T:     new(big.Int).SetBytes(m.GetProofT()),
+	}, nil
 }

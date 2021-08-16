@@ -253,6 +253,79 @@ func (x *PresignRound3Message) GetTheta() []byte {
 	return nil
 }
 
+//
+// Represents a BROADCAST message sent to all parties during Round 4 of the ECDSA TSS presigning protocol.
+type PresignRound4Message struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	DeCommitment [][]byte `protobuf:"bytes,1,rep,name=de_commitment,json=deCommitment,proto3" json:"de_commitment,omitempty"`
+	ProofAlphaX  []byte   `protobuf:"bytes,2,opt,name=proof_alpha_x,json=proofAlphaX,proto3" json:"proof_alpha_x,omitempty"`
+	ProofAlphaY  []byte   `protobuf:"bytes,3,opt,name=proof_alpha_y,json=proofAlphaY,proto3" json:"proof_alpha_y,omitempty"`
+	ProofT       []byte   `protobuf:"bytes,4,opt,name=proof_t,json=proofT,proto3" json:"proof_t,omitempty"`
+}
+
+func (x *PresignRound4Message) Reset() {
+	*x = PresignRound4Message{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ecdsa_presign_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PresignRound4Message) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PresignRound4Message) ProtoMessage() {}
+
+func (x *PresignRound4Message) ProtoReflect() protoreflect.Message {
+	mi := &file_ecdsa_presign_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PresignRound4Message.ProtoReflect.Descriptor instead.
+func (*PresignRound4Message) Descriptor() ([]byte, []int) {
+	return file_ecdsa_presign_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PresignRound4Message) GetDeCommitment() [][]byte {
+	if x != nil {
+		return x.DeCommitment
+	}
+	return nil
+}
+
+func (x *PresignRound4Message) GetProofAlphaX() []byte {
+	if x != nil {
+		return x.ProofAlphaX
+	}
+	return nil
+}
+
+func (x *PresignRound4Message) GetProofAlphaY() []byte {
+	if x != nil {
+		return x.ProofAlphaY
+	}
+	return nil
+}
+
+func (x *PresignRound4Message) GetProofT() []byte {
+	if x != nil {
+		return x.ProofT
+	}
+	return nil
+}
+
 var File_ecdsa_presign_proto protoreflect.FileDescriptor
 
 var file_ecdsa_presign_proto_rawDesc = []byte{
@@ -276,8 +349,18 @@ var file_ecdsa_presign_proto_rawDesc = []byte{
 	0x6f, 0x6f, 0x66, 0x42, 0x6f, 0x62, 0x57, 0x63, 0x22, 0x2c, 0x0a, 0x14, 0x50, 0x72, 0x65, 0x73,
 	0x69, 0x67, 0x6e, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x33, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
 	0x12, 0x14, 0x0a, 0x05, 0x74, 0x68, 0x65, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52,
-	0x05, 0x74, 0x68, 0x65, 0x74, 0x61, 0x42, 0x0f, 0x5a, 0x0d, 0x65, 0x63, 0x64, 0x73, 0x61, 0x2f,
-	0x70, 0x72, 0x65, 0x73, 0x69, 0x67, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x05, 0x74, 0x68, 0x65, 0x74, 0x61, 0x22, 0x9c, 0x01, 0x0a, 0x14, 0x50, 0x72, 0x65, 0x73, 0x69,
+	0x67, 0x6e, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x34, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12,
+	0x23, 0x0a, 0x0d, 0x64, 0x65, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x6d, 0x65, 0x6e, 0x74,
+	0x18, 0x01, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x0c, 0x64, 0x65, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74,
+	0x6d, 0x65, 0x6e, 0x74, 0x12, 0x22, 0x0a, 0x0d, 0x70, 0x72, 0x6f, 0x6f, 0x66, 0x5f, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x5f, 0x78, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0b, 0x70, 0x72, 0x6f,
+	0x6f, 0x66, 0x41, 0x6c, 0x70, 0x68, 0x61, 0x58, 0x12, 0x22, 0x0a, 0x0d, 0x70, 0x72, 0x6f, 0x6f,
+	0x66, 0x5f, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x5f, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52,
+	0x0b, 0x70, 0x72, 0x6f, 0x6f, 0x66, 0x41, 0x6c, 0x70, 0x68, 0x61, 0x59, 0x12, 0x17, 0x0a, 0x07,
+	0x70, 0x72, 0x6f, 0x6f, 0x66, 0x5f, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x70,
+	0x72, 0x6f, 0x6f, 0x66, 0x54, 0x42, 0x0f, 0x5a, 0x0d, 0x65, 0x63, 0x64, 0x73, 0x61, 0x2f, 0x70,
+	0x72, 0x65, 0x73, 0x69, 0x67, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -292,12 +375,13 @@ func file_ecdsa_presign_proto_rawDescGZIP() []byte {
 	return file_ecdsa_presign_proto_rawDescData
 }
 
-var file_ecdsa_presign_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_ecdsa_presign_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_ecdsa_presign_proto_goTypes = []interface{}{
 	(*PresignRound1Message1)(nil), // 0: PresignRound1Message1
 	(*PresignRound1Message2)(nil), // 1: PresignRound1Message2
 	(*PresignRound2Message)(nil),  // 2: PresignRound2Message
 	(*PresignRound3Message)(nil),  // 3: PresignRound3Message
+	(*PresignRound4Message)(nil),  // 4: PresignRound4Message
 }
 var file_ecdsa_presign_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -361,6 +445,18 @@ func file_ecdsa_presign_proto_init() {
 				return nil
 			}
 		}
+		file_ecdsa_presign_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PresignRound4Message); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -368,7 +464,7 @@ func file_ecdsa_presign_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ecdsa_presign_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

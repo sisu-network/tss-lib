@@ -34,6 +34,9 @@ type (
 	round4 struct {
 		*round3
 	}
+	round5 struct {
+		*round4
+	}
 )
 
 func (round *base) Params() *tss.Parameters {
