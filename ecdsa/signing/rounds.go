@@ -1,22 +1,24 @@
-package presign
+package signing
 
 import (
 	"github.com/sisu-network/tss-lib/common"
-	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
 const (
-	TaskName = "presign"
+	TaskName = "signing"
 )
 
 type (
 	base struct {
 		*tss.Parameters
-		key     *keygen.LocalPartySaveData
-		temp    *localTempData
-		out     chan<- tss.Message
-		end     chan<- common.PresignatureData
+		presignData *common.PresignatureData
+		sigData     *common.SignatureData
+
+		temp *localTempData
+		out  chan<- tss.Message
+		end  chan<- common.SignatureData
+
 		ok      []bool // `ok` tracks parties which have been verified by Update()
 		started bool
 		number  int
@@ -25,18 +27,14 @@ type (
 	round1 struct {
 		*base
 	}
-	round2 struct {
+
+	finalization struct {
 		*round1
 	}
-	round3 struct {
-		*round2
-	}
-	round4 struct {
-		*round3
-	}
-	round5 struct {
-		*round4
-	}
+)
+
+var (
+	_ tss.Round = (*round1)(nil)
 )
 
 func (round *base) Params() *tss.Parameters {

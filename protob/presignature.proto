@@ -5,6 +5,8 @@ option go_package = "./common";
 message PresignatureData {
   bytes w = 1;
   bytes k = 2;
-  bytes sigma = 3;
-  bytes RSigmai = 4;
+  bytes rx = 3;
+  bytes ry = 4;
+  bytes sigma = 5;
+  bytes rSigma = 6;
 }

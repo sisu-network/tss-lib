@@ -12,7 +12,9 @@ import (
 	"github.com/sisu-network/tss-lib/tss"
 )
 
-// Protobuf command: protoc --proto_path=protob --go_out=ecdsa/presign --go_opt=paths=source_relative ecdsa-presign.proto
+// Protobuf command:
+// protoc --proto_path=protob --go_out=ecdsa/presign --go_opt=paths=source_relative ecdsa-presign.proto
+// protoc --proto_path=protob --go_out=common --go_opt=paths=source_relative presignature.proto
 
 var (
 	// Ensure that keygen messages implement ValidateBasic
