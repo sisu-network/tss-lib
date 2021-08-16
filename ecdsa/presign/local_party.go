@@ -46,7 +46,6 @@ type (
 
 		// temp data (thrown away after sign) / round 1
 		w,
-		m,
 		k,
 		theta,
 		thetaInverse,
@@ -66,20 +65,10 @@ type (
 		pi2jis []*mta.ProofBobWC
 
 		// round 5
-		li,
-		si,
 		rx,
-		ry,
-		roi *big.Int
-		bigR,
-		bigAi,
-		bigVi *crypto.ECPoint
-		DPower cmt.HashDeCommitment
+		ry *big.Int
 
-		// round 7
-		Ui,
-		Ti *crypto.ECPoint
-		DTelda cmt.HashDeCommitment
+		bigR *crypto.ECPoint
 	}
 )
 
@@ -108,7 +97,6 @@ func NewLocalParty(
 	p.temp.signRound4Messages = make([]tss.ParsedMessage, partyCount)
 
 	// temp data init
-	p.temp.m = msg
 	p.temp.cis = make([]*big.Int, partyCount)
 	p.temp.bigWs = make([]*crypto.ECPoint, partyCount)
 	p.temp.betas = make([]*big.Int, partyCount)
