@@ -18,15 +18,14 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
 const (
 	// To change these parameters, you must first delete the text fixture files in test/_fixtures/ and then run the keygen test alone.
 	// Then the signing and resharing tests will work with the new n, t configuration using the newly written fixture files.
-	TestParticipants = test.TestParticipants
-	TestThreshold    = test.TestParticipants / 2
+	TestParticipants = 20
+	TestThreshold    = TestParticipants / 2
 )
 const (
 	testFixtureDirFormat  = "%s/../../test/_ecdsa_fixtures"

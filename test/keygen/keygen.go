@@ -148,6 +148,8 @@ func generateSigningNode(p2pCtx *tss.PeerContext, pIDs []*tss.PartyID, index int
 			// pubKey, err := GetTssPubKey(msg.ECDSAPub)
 			keyGenWg.Done()
 
+			// Save data to local disk. In testing mode, we don't encrypt saved data.
+
 			common.Logger.Debug("Done!", index)
 			return
 		}
