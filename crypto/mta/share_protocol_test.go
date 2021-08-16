@@ -1,3 +1,5 @@
+package mta
+
 // // Copyright © 2019 Binance
 // //
 // // This file is part of Binance. The full Binance copyright notice, including

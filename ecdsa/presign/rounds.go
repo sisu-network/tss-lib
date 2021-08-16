@@ -16,7 +16,7 @@ type (
 		key     *keygen.LocalPartySaveData
 		temp    *localTempData
 		out     chan<- tss.Message
-		end     chan<- common.SignatureData
+		end     chan<- common.PresignatureData
 		ok      []bool // `ok` tracks parties which have been verified by Update()
 		started bool
 		number  int
