@@ -28,6 +28,12 @@ type (
 	round2 struct {
 		*round1
 	}
+	round3 struct {
+		*round2
+	}
+	round4 struct {
+		*round3
+	}
 )
 
 func (round *base) Params() *tss.Parameters {

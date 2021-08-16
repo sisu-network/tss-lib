@@ -119,3 +119,25 @@ func (m *PresignRound2Message) UnmarshalProofBob() (*mta.ProofBob, error) {
 func (m *PresignRound2Message) UnmarshalProofBobWC() (*mta.ProofBobWC, error) {
 	return mta.ProofBobWCFromBytes(m.ProofBobWc)
 }
+
+// ----- //
+
+func NewSignRound3Message(
+	from *tss.PartyID,
+	theta *big.Int,
+) tss.ParsedMessage {
+	meta := tss.MessageRouting{
+		From:        from,
+		IsBroadcast: true,
+	}
+	content := &PresignRound3Message{
+		Theta: theta.Bytes(),
+	}
+	msg := tss.NewMessageWrapper(meta, content)
+	return tss.NewMessage(meta, content, msg)
+}
+
+func (m *PresignRound3Message) ValidateBasic() bool {
+	return m != nil &&
+		common.NonEmptyBytes(m.Theta)
+}

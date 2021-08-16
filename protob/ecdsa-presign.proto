@@ -26,3 +26,10 @@ message PresignRound1Message1 {
   repeated bytes proof_bob = 3;
   repeated bytes proof_bob_wc = 4;
 }
+
+/*
+ * Represents a BROADCAST message sent to all parties during Round 3 of the ECDSA TSS presigning protocol.
+ */
+ message PresignRound3Message {
+  bytes theta = 1;
+}
