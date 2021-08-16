@@ -34,11 +34,12 @@ type (
 	}
 
 	localMessageStore struct {
-		signRound1Message1s,
-		signRound1Message2s,
-		signRound2Messages,
-		signRound3Messages,
-		signRound4Messages []tss.ParsedMessage
+		presignRound1Message1s,
+		presignRound1Message2s,
+		presignRound2Messages,
+		presignRound3Messages,
+		presignRound4Messages,
+		presignRound5Messages []tss.ParsedMessage
 	}
 
 	localTempData struct {
@@ -66,7 +67,8 @@ type (
 
 		// round 5
 		rx,
-		ry *big.Int
+		ry,
+		rSigma *big.Int
 
 		bigR *crypto.ECPoint
 	}
@@ -90,11 +92,11 @@ func NewLocalParty(
 		end:       end,
 	}
 	// msgs init
-	p.temp.signRound1Message1s = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound1Message2s = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound2Messages = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound3Messages = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound4Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound1Message1s = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound1Message2s = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound2Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound3Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound4Messages = make([]tss.ParsedMessage, partyCount)
 
 	// temp data init
 	p.temp.cis = make([]*big.Int, partyCount)
@@ -160,11 +162,15 @@ func (p *LocalParty) StoreMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
 	// this does not handle message replays. we expect the caller to apply replay and spoofing protection.
 	switch msg.Content().(type) {
 	case *PresignRound1Message1:
-		p.temp.signRound1Message1s[fromPIdx] = msg
+		p.temp.presignRound1Message1s[fromPIdx] = msg
 	case *PresignRound1Message2:
-		p.temp.signRound1Message2s[fromPIdx] = msg
-
-	// TODO: Add more rounds here.
+		p.temp.presignRound1Message2s[fromPIdx] = msg
+	case *PresignRound2Message:
+		p.temp.presignRound2Messages[fromPIdx] = msg
+	case *PresignRound3Message:
+		p.temp.presignRound3Messages[fromPIdx] = msg
+	case *PresignRound4Message:
+		p.temp.presignRound4Messages[fromPIdx] = msg
 
 	default: // unrecognised message, just ignore!
 		common.Logger.Warningf("unrecognised message ignored: %v", msg)

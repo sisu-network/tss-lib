@@ -28,7 +28,7 @@ func (round *round4) Start() *tss.Error {
 		if j == round.PartyID().Index {
 			continue
 		}
-		r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
+		r3msg := round.temp.presignRound3Messages[j].Content().(*PresignRound3Message)
 		theltaJ := r3msg.GetTheta()
 		thetaInverse = modN.Add(thetaInverse, new(big.Int).SetBytes(theltaJ))
 	}
@@ -40,15 +40,16 @@ func (round *round4) Start() *tss.Error {
 		return round.WrapError(errors2.Wrapf(err, "NewZKProof(gamma, bigGamma)"))
 	}
 	round.temp.thetaInverse = thetaInverse
+
 	r4msg := NewSignRound4Message(round.PartyID(), round.temp.deCommit, piGamma)
-	round.temp.signRound4Messages[round.PartyID().Index] = r4msg
+	round.temp.presignRound4Messages[round.PartyID().Index] = r4msg
 	round.out <- r4msg
 
 	return nil
 }
 
 func (round *round4) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.signRound4Messages {
+	for j, msg := range round.temp.presignRound4Messages {
 		if round.ok[j] {
 			continue
 		}

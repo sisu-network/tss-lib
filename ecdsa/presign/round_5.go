@@ -2,6 +2,7 @@ package presign
 
 import (
 	"errors"
+	"flag"
 
 	errors2 "github.com/pkg/errors"
 	"github.com/sisu-network/tss-lib/common"
@@ -23,8 +24,8 @@ func (round *round5) Start() *tss.Error {
 		if j == round.PartyID().Index {
 			continue
 		}
-		r1msg2 := round.temp.signRound1Message2s[j].Content().(*PresignRound1Message2)
-		r4msg := round.temp.signRound4Messages[j].Content().(*PresignRound4Message)
+		r1msg2 := round.temp.presignRound1Message2s[j].Content().(*PresignRound1Message2)
+		r4msg := round.temp.presignRound4Messages[j].Content().(*PresignRound4Message)
 		SCj, SDj := r1msg2.UnmarshalCommitment(), r4msg.UnmarshalDeCommitment()
 		cmtDeCmt := commitments.HashCommitDecommit{C: SCj, D: SDj}
 		ok, bigGammaJ := cmtDeCmt.DeCommit()
@@ -54,23 +55,26 @@ func (round *round5) Start() *tss.Error {
 	modN := common.ModInt(N)
 	rx := R.X()
 	ry := R.Y()
-	rSigmai := modN.Mul(rx, round.temp.sigma)
+	rSigma := modN.Mul(rx, round.temp.sigma)
 
-	// clear temp.w and temp.k from memory, lint ignore
-	round.temp.w = zero
-	round.temp.k = zero
+	if flag.Lookup("test.v") == nil {
+		// clear temp.w and temp.k from memory. Keep it in test mode
+		round.temp.w = zero
+		round.temp.k = zero
+	}
 
 	round.temp.rx = rx
 	round.temp.ry = ry
 	round.temp.bigR = R
+	round.temp.rSigma = rSigma
 
 	presignData := common.PresignatureData{
+		W:       round.temp.w.Bytes(),
 		K:       round.temp.k.Bytes(),
 		Sigma:   round.temp.sigma.Bytes(),
-		RSigmai: rSigmai.Bytes(),
+		RSigmai: rSigma.Bytes(),
 	}
 
-	// TODO: Pass presign data to the end channel here.
 	round.end <- presignData
 
 	return nil
