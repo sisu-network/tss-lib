@@ -106,3 +106,19 @@ func (p *LocalParty) UpdateFromBytes(wireBytes []byte, from *tss.PartyID, isBroa
 func (p *LocalParty) Start() *tss.Error {
 	return tss.BaseStart(p, TaskName)
 }
+
+func (p *LocalParty) ValidateMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
+	if ok, err := p.BaseParty.ValidateMessage(msg); !ok || err != nil {
+		return ok, err
+	}
+	// check that the message's "from index" will fit into the array
+	if maxFromIdx := p.params.PartyCount() - 1; maxFromIdx < msg.GetFrom().Index {
+		return false, p.WrapError(fmt.Errorf("received msg with a sender index too great (%d <= %d)",
+			p.params.PartyCount(), msg.GetFrom().Index), msg.GetFrom())
+	}
+	return true, nil
+}
+
+func (p *LocalParty) String() string {
+	return fmt.Sprintf("id: %s, %s", p.PartyID(), p.BaseParty.String())
+}

@@ -101,6 +101,7 @@ func NewLocalParty(
 	p.temp.presignRound4Messages = make([]tss.ParsedMessage, partyCount)
 
 	// temp data init
+	p.temp.partyIds = partyIds
 	p.temp.cis = make([]*big.Int, partyCount)
 	p.temp.bigWs = make([]*crypto.ECPoint, partyCount)
 	p.temp.betas = make([]*big.Int, partyCount)

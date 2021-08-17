@@ -61,17 +61,15 @@ func (round *round5) Start() *tss.Error {
 	round.temp.bigR = R
 	round.temp.rSigma = rSigma
 
-	presignData := LocalPresignData{
-		PartyIds: round.temp.partyIds,
-		W:        round.temp.w,
-		K:        round.temp.k,
-		Rx:       rx,
-		Ry:       ry,
-		RSigma:   rSigma,
-	}
-	round.data = &presignData
+	round.data.PartyIds = round.temp.partyIds
+	round.data.ECDSAPub = round.key.ECDSAPub
+	round.data.W = round.temp.w
+	round.data.K = round.temp.k
+	round.data.Rx = rx
+	round.data.Ry = ry
+	round.data.RSigma = rSigma
 
-	round.end <- presignData
+	round.end <- *round.data
 
 	return nil
 }

@@ -93,9 +93,7 @@ presignature:
 	verifyR(t, parties)
 	verifySignature(t, parties, msgInt, keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y())
 
-	// Save data
-	// for _, p := range parties {
-	// }
+	SavePresignData(parties)
 }
 
 func verifyPubKey(t *testing.T, parties []*LocalParty, pubX, pubY *big.Int) {
