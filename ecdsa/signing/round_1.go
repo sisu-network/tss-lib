@@ -5,10 +5,11 @@ import (
 	"math/big"
 
 	"github.com/sisu-network/tss-lib/common"
+	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
-func newRound1(params *tss.Parameters, presignData *common.PresignatureData, sigData *common.SignatureData, temp *localTempData, out chan<- tss.Message, end chan<- common.SignatureData) tss.Round {
+func newRound1(params *tss.Parameters, presignData *presign.LocalPresignData, sigData *common.SignatureData, temp *localTempData, out chan<- tss.Message, end chan<- common.SignatureData) tss.Round {
 	return &round1{
 		&base{params, presignData, sigData, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
 }
@@ -30,11 +31,8 @@ func (round *round1) Start() *tss.Error {
 	round.started = true
 	round.resetOK()
 
-	ki := new(big.Int).SetBytes(round.presignData.K)
-	si := new(big.Int).Mul(round.temp.m, ki)
-
-	rSigma := new(big.Int).SetBytes(round.presignData.RSigma)
-	si.Add(si, rSigma)
+	si := new(big.Int).Mul(round.temp.m, round.presignData.K)
+	si.Add(si, round.presignData.RSigma)
 	si.Mod(si, tss.EC().Params().N)
 
 	round.temp.si = si

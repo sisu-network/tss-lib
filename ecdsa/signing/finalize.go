@@ -31,8 +31,8 @@ func (round *finalization) Start() *tss.Error {
 	}
 
 	recid := 0
-	rx := new(big.Int).SetBytes(round.presignData.Rx)
-	ry := new(big.Int).SetBytes(round.presignData.Ry)
+	rx := round.presignData.Rx
+	ry := round.presignData.Ry
 
 	// byte v = if(R.X > curve.N) then 2 else 0) | (if R.Y.IsEven then 0 else 1);
 	if rx.Cmp(tss.EC().Params().N) > 0 {
@@ -54,7 +54,7 @@ func (round *finalization) Start() *tss.Error {
 
 	// save the signature for final output
 	bitSizeInBytes := tss.EC().Params().BitSize / 8
-	round.sigData.R = padToLengthBytesInPlace(round.presignData.Rx, bitSizeInBytes)
+	round.sigData.R = padToLengthBytesInPlace(round.presignData.Rx.Bytes(), bitSizeInBytes)
 	round.sigData.S = padToLengthBytesInPlace(sumS.Bytes(), bitSizeInBytes)
 	round.sigData.Signature = append(round.sigData.R, round.sigData.S...)
 	round.sigData.SignatureRecovery = []byte{byte(recid)}

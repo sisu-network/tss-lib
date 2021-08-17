@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/sisu-network/tss-lib/common"
+	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -16,7 +17,7 @@ type (
 		*tss.BaseParty
 		params *tss.Parameters
 
-		presignData *common.PresignatureData
+		presignData *presign.LocalPresignData
 		sigData     *common.SignatureData
 		temp        localTempData
 
@@ -39,7 +40,7 @@ type (
 func NewLocalParty(
 	msg *big.Int,
 	params *tss.Parameters,
-	presignData *common.PresignatureData,
+	presignData *presign.LocalPresignData,
 	pubX, pubY *big.Int,
 
 	out chan<- tss.Message,

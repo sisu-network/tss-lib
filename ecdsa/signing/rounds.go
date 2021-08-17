@@ -2,6 +2,7 @@ package signing
 
 import (
 	"github.com/sisu-network/tss-lib/common"
+	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -12,7 +13,7 @@ const (
 type (
 	base struct {
 		*tss.Parameters
-		presignData *common.PresignatureData
+		presignData *presign.LocalPresignData
 		sigData     *common.SignatureData
 
 		temp *localTempData
