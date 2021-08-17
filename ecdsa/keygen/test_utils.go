@@ -28,8 +28,8 @@ const (
 	TestThreshold    = TestParticipants / 2
 )
 const (
-	testFixtureDirFormat  = "%s/../../test/_ecdsa_fixtures"
-	testFixtureFileFormat = "keygen_data_%d.json"
+	testKeygenFixtureDirFormat  = "%s/../../test/_ecdsa_keygen_fixtures"
+	testKeygenFixtureFileFormat = "keygen_data_%d.json"
 )
 
 func LoadKeygenTestFixtures(qty int, optionalStart ...int) ([]LocalPartySaveData, tss.SortedPartyIDs, error) {
@@ -114,6 +114,6 @@ func LoadNTildeH1H2FromTestFixture(idx int) (NTildei, h1i, h2i *big.Int, err err
 func makeTestFixtureFilePath(partyIndex int) string {
 	_, callerFileName, _, _ := runtime.Caller(0)
 	srcDirName := filepath.Dir(callerFileName)
-	fixtureDirName := fmt.Sprintf(testFixtureDirFormat, srcDirName)
-	return fmt.Sprintf("%s/"+testFixtureFileFormat, fixtureDirName, partyIndex)
+	fixtureDirName := fmt.Sprintf(testKeygenFixtureDirFormat, srcDirName)
+	return fmt.Sprintf("%s/"+testKeygenFixtureFileFormat, fixtureDirName, partyIndex)
 }

@@ -2,7 +2,6 @@ package presign
 
 import (
 	"errors"
-	"flag"
 
 	errors2 "github.com/pkg/errors"
 	"github.com/sisu-network/tss-lib/common"
@@ -57,23 +56,20 @@ func (round *round5) Start() *tss.Error {
 	ry := R.Y()
 	rSigma := modN.Mul(rx, round.temp.sigma)
 
-	if flag.Lookup("test.v") == nil {
-		// clear temp.w and temp.k from memory. Keep it in test mode
-		round.temp.w = zero
-		round.temp.k = zero
-	}
-
 	round.temp.rx = rx
 	round.temp.ry = ry
 	round.temp.bigR = R
 	round.temp.rSigma = rSigma
 
-	presignData := common.PresignatureData{
-		W:       round.temp.w.Bytes(),
-		K:       round.temp.k.Bytes(),
-		Sigma:   round.temp.sigma.Bytes(),
-		RSigmai: rSigma.Bytes(),
+	presignData := LocalPresignData{
+		PartyIds: round.temp.partyIds,
+		W:        round.temp.w,
+		K:        round.temp.k,
+		Rx:       rx,
+		Ry:       ry,
+		RSigma:   rSigma,
 	}
+	round.data = &presignData
 
 	round.end <- presignData
 

@@ -15,10 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestE2EConcurrent(t *testing.T) {
+func TestPresign(t *testing.T) {
 	// log.SetLogLevel("tss-lib", "info")
 
-	n := 15
+	n := 20
 	threshold := 10
 
 	// PHASE: load keygen fixtures
@@ -32,7 +32,7 @@ func TestE2EConcurrent(t *testing.T) {
 
 	errCh := make(chan *tss.Error, len(signPIDs))
 	outCh := make(chan tss.Message, len(signPIDs))
-	endCh := make(chan common.PresignatureData, len(signPIDs))
+	endCh := make(chan LocalPresignData, len(signPIDs))
 
 	updater := test.SharedPartyUpdater
 
@@ -42,7 +42,7 @@ func TestE2EConcurrent(t *testing.T) {
 	for i := 0; i < len(signPIDs); i++ {
 		params := tss.NewParameters(p2pCtx, signPIDs[i], len(signPIDs), threshold)
 
-		P := NewLocalParty(msgInt, params, keys[i], outCh, endCh).(*LocalParty)
+		P := NewLocalParty(signPIDs, params, keys[i], outCh, endCh).(*LocalParty)
 		parties = append(parties, P)
 		go func(P *LocalParty) {
 			if err := P.Start(); err != nil {
@@ -80,6 +80,7 @@ presignature:
 		case <-endCh:
 			atomic.AddInt32(&ended, 1)
 			if atomic.LoadInt32(&ended) == int32(len(signPIDs)) {
+				fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
 				fmt.Println("All tasks finished")
 				break presignature
 			}
@@ -91,6 +92,10 @@ presignature:
 	verifySigma(t, parties)
 	verifyR(t, parties)
 	verifySignature(t, parties, msgInt, keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y())
+
+	// Save data
+	// for _, p := range parties {
+	// }
 }
 
 func verifyPubKey(t *testing.T, parties []*LocalParty, pubX, pubY *big.Int) {

@@ -1,7 +1,6 @@
 package presign
 
 import (
-	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
 )
@@ -14,9 +13,10 @@ type (
 	base struct {
 		*tss.Parameters
 		key     *keygen.LocalPartySaveData
+		data    *LocalPresignData
 		temp    *localTempData
 		out     chan<- tss.Message
-		end     chan<- common.PresignatureData
+		end     chan<- LocalPresignData
 		ok      []bool // `ok` tracks parties which have been verified by Update()
 		started bool
 		number  int

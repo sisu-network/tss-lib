@@ -26,11 +26,11 @@ type (
 
 		keys keygen.LocalPartySaveData
 		temp localTempData
-		data common.PresignatureData
+		data LocalPresignData
 
 		// outbound messaging
 		out chan<- tss.Message
-		end chan<- common.PresignatureData
+		end chan<- LocalPresignData
 	}
 
 	localMessageStore struct {
@@ -44,6 +44,8 @@ type (
 
 	localTempData struct {
 		localMessageStore
+
+		partyIds tss.SortedPartyIDs
 
 		// temp data (thrown away after sign) / round 1
 		w,
@@ -75,11 +77,11 @@ type (
 )
 
 func NewLocalParty(
-	msg *big.Int,
+	partyIds tss.SortedPartyIDs,
 	params *tss.Parameters,
 	key keygen.LocalPartySaveData,
 	out chan<- tss.Message,
-	end chan<- common.PresignatureData,
+	end chan<- LocalPresignData,
 ) tss.Party {
 	partyCount := len(params.Parties().IDs())
 	p := &LocalParty{
@@ -87,7 +89,7 @@ func NewLocalParty(
 		params:    params,
 		keys:      keygen.BuildLocalSaveDataSubset(key, params.Parties().IDs()),
 		temp:      localTempData{},
-		data:      common.PresignatureData{},
+		data:      LocalPresignData{},
 		out:       out,
 		end:       end,
 	}
@@ -111,7 +113,7 @@ func NewLocalParty(
 }
 
 func (p *LocalParty) FirstRound() tss.Round {
-	return newRound1(p.params, &p.keys, &p.temp, p.out, p.end)
+	return newRound1(p.params, &p.keys, &p.data, &p.temp, p.out, p.end)
 }
 
 func (p *LocalParty) Start() *tss.Error {

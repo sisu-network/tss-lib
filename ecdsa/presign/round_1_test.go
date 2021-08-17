@@ -1,11 +1,9 @@
 package presign
 
 import (
-	"math/big"
 	"testing"
 	"time"
 
-	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
 	"github.com/stretchr/testify/assert"
@@ -23,9 +21,9 @@ func TestRound1(t *testing.T) {
 	p2pCtx := tss.NewPeerContext(signPIDs)
 	params := tss.NewParameters(p2pCtx, signPIDs[0], len(signPIDs), testThreshold)
 	outCh := make(chan tss.Message, len(signPIDs))
-	endCh := make(chan common.PresignatureData, len(signPIDs))
+	endCh := make(chan LocalPresignData, len(signPIDs))
 
-	P := NewLocalParty(big.NewInt(42), params, keys[0], outCh, endCh).(*LocalParty)
+	P := NewLocalParty(signPIDs, params, keys[0], outCh, endCh).(*LocalParty)
 
 	round1 := P.FirstRound()
 	round1.Start()
