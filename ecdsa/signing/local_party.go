@@ -41,7 +41,6 @@ func NewLocalParty(
 	msg *big.Int,
 	params *tss.Parameters,
 	presignData *presign.LocalPresignData,
-	pubX, pubY *big.Int,
 
 	out chan<- tss.Message,
 	end chan<- common.SignatureData,
@@ -60,8 +59,8 @@ func NewLocalParty(
 	p.temp.signRound1Messages = make([]tss.ParsedMessage, partyCount)
 
 	p.temp.m = msg
-	p.temp.pubX = pubX
-	p.temp.pubY = pubY
+	p.temp.pubX = presignData.ECDSAPub.X()
+	p.temp.pubY = presignData.ECDSAPub.Y()
 
 	return p
 }

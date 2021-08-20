@@ -31,7 +31,7 @@ func TestSigning(t *testing.T) {
 	msgInt := new(big.Int).SetBytes([]byte("this is a test"))
 	for i := 0; i < n; i++ {
 		params := tss.NewParameters(p2pCtx, savedData[i].PartyIds[i], len(savedData), threshold)
-		P := NewLocalParty(msgInt, params, savedData[i], savedData[0].ECDSAPub.X(), savedData[0].ECDSAPub.Y(), outCh, endCh).(*LocalParty)
+		P := NewLocalParty(msgInt, params, savedData[i], outCh, endCh).(*LocalParty)
 
 		parties = append(parties, P)
 
