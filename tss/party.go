@@ -100,14 +100,16 @@ func (p *BaseParty) RoundNumber() int {
 
 func (p *BaseParty) setRound(round Round) *Error {
 	p.roundLock.RLock()
-	if p.rnd != nil {
-		p.roundLock.RUnlock()
+	rnd := p.rnd
+	p.roundLock.RUnlock()
+
+	if rnd != nil {
 		return p.WrapError(errors.New("a round is already set on this party"))
 	}
-	p.roundLock.RUnlock()
+
 	p.roundLock.Lock()
-	p.roundLock.Unlock()
 	p.rnd = round
+	p.roundLock.Unlock()
 	return nil
 }
 
