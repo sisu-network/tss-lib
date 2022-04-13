@@ -1,9 +1,10 @@
 package presign
 
 import (
+	"sync"
+
 	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
-	"sync"
 )
 
 const (

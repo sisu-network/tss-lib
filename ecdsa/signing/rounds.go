@@ -1,10 +1,11 @@
 package signing
 
 import (
+	"sync"
+
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
-	"sync"
 )
 
 const (
