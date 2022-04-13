@@ -4,6 +4,7 @@ import (
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
+	"sync"
 )
 
 const (
@@ -20,9 +21,10 @@ type (
 		out  chan<- tss.Message
 		end  chan<- common.SignatureData
 
-		ok      []bool // `ok` tracks parties which have been verified by Update()
-		started bool
-		number  int
+		ok        []bool // `ok` tracks parties which have been verified by Update()
+		started   bool
+		number    int
+		roundLock sync.RWMutex
 	}
 
 	round1 struct {
@@ -43,6 +45,8 @@ func (round *base) Params() *tss.Parameters {
 }
 
 func (round *base) RoundNumber() int {
+	round.roundLock.RLock()
+	defer round.roundLock.RUnlock()
 	return round.number
 }
 

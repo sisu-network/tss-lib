@@ -31,7 +31,9 @@ func (round *round3) Start() *tss.Error {
 	if round.started {
 		return round.WrapError(errors.New("round already started"))
 	}
+	round.roundLock.Lock()
 	round.number = 3
+	round.roundLock.Unlock()
 	round.started = true
 	round.resetOK()
 

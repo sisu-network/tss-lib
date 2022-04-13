@@ -14,6 +14,8 @@
 package keygen
 
 import (
+	"sync"
+
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -24,13 +26,14 @@ const (
 type (
 	base struct {
 		*tss.Parameters
-		save    *LocalPartySaveData
-		temp    *localTempData
-		out     chan<- tss.Message
-		end     chan<- LocalPartySaveData
-		ok      []bool // `ok` tracks parties which have been verified by Update()
-		started bool
-		number  int
+		save      *LocalPartySaveData
+		temp      *localTempData
+		out       chan<- tss.Message
+		end       chan<- LocalPartySaveData
+		ok        []bool // `ok` tracks parties which have been verified by Update()
+		started   bool
+		number    int
+		roundLock sync.RWMutex
 	}
 	round1 struct {
 		*base
@@ -60,6 +63,8 @@ func (round *base) Params() *tss.Parameters {
 }
 
 func (round *base) RoundNumber() int {
+	round.roundLock.RLock()
+	defer round.roundLock.RUnlock()
 	return round.number
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
@@ -20,7 +21,7 @@ var (
 // round 1 represents round 1 of the signing part of the GG18 ECDSA TSS spec (Gennaro, Goldfeder; 2018)
 func newRound1(params *tss.Parameters, key *keygen.LocalPartySaveData, data *LocalPresignData, temp *localTempData, out chan<- tss.Message, end chan<- LocalPresignData) tss.Round {
 	return &round1{
-		&base{params, key, data, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
+		&base{params, key, data, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1, sync.RWMutex{}}}
 }
 
 func (round *round1) Start() *tss.Error {
@@ -28,7 +29,9 @@ func (round *round1) Start() *tss.Error {
 		return round.WrapError(errors.New("round already started"))
 	}
 
+	round.roundLock.Lock()
 	round.number = 1
+	round.roundLock.Unlock()
 	round.started = true
 	round.resetOK()
 

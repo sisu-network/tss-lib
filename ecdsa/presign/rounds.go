@@ -3,6 +3,7 @@ package presign
 import (
 	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
+	"sync"
 )
 
 const (
@@ -12,14 +13,15 @@ const (
 type (
 	base struct {
 		*tss.Parameters
-		key     *keygen.LocalPartySaveData
-		data    *LocalPresignData
-		temp    *localTempData
-		out     chan<- tss.Message
-		end     chan<- LocalPresignData
-		ok      []bool // `ok` tracks parties which have been verified by Update()
-		started bool
-		number  int
+		key       *keygen.LocalPartySaveData
+		data      *LocalPresignData
+		temp      *localTempData
+		out       chan<- tss.Message
+		end       chan<- LocalPresignData
+		ok        []bool // `ok` tracks parties which have been verified by Update()
+		started   bool
+		number    int
+		roundLock sync.RWMutex
 	}
 
 	round1 struct {
@@ -44,6 +46,8 @@ func (round *base) Params() *tss.Parameters {
 }
 
 func (round *base) RoundNumber() int {
+	round.roundLock.RLock()
+	defer round.roundLock.RUnlock()
 	return round.number
 }
 

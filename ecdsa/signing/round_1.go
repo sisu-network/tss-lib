@@ -3,6 +3,7 @@ package signing
 import (
 	"errors"
 	"math/big"
+	"sync"
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/ecdsa/presign"
@@ -11,7 +12,7 @@ import (
 
 func newRound1(params *tss.Parameters, presignData *presign.LocalPresignData, sigData *common.SignatureData, temp *localTempData, out chan<- tss.Message, end chan<- common.SignatureData) tss.Round {
 	return &round1{
-		&base{params, presignData, sigData, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
+		&base{params, presignData, sigData, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1, sync.RWMutex{}}}
 }
 
 func (round *round1) Start() *tss.Error {
@@ -27,7 +28,9 @@ func (round *round1) Start() *tss.Error {
 		return round.WrapError(errors.New("hashed message is not valid"))
 	}
 
+	round.roundLock.Lock()
 	round.number = 1
+	round.roundLock.Unlock()
 	round.started = true
 	round.resetOK()
 

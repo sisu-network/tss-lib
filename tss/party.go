@@ -50,6 +50,7 @@ type BaseParty struct {
 	mtx        sync.Mutex
 	rnd        Round
 	FirstRound Round
+	roundLock  sync.RWMutex
 }
 
 func (p *BaseParty) Running() bool {
@@ -98,18 +99,27 @@ func (p *BaseParty) RoundNumber() int {
 // Private lifecycle methods
 
 func (p *BaseParty) setRound(round Round) *Error {
+	p.roundLock.RLock()
 	if p.rnd != nil {
+		p.roundLock.RUnlock()
 		return p.WrapError(errors.New("a round is already set on this party"))
 	}
+	p.roundLock.RUnlock()
+	p.roundLock.Lock()
+	p.roundLock.Unlock()
 	p.rnd = round
 	return nil
 }
 
 func (p *BaseParty) round() Round {
+	p.roundLock.RLock()
+	defer p.roundLock.RUnlock()
 	return p.rnd
 }
 
 func (p *BaseParty) advance() {
+	p.roundLock.Lock()
+	defer p.roundLock.Unlock()
 	p.rnd = p.rnd.NextRound()
 }
 
