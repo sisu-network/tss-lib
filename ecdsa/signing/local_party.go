@@ -121,7 +121,3 @@ func (p *LocalParty) ValidateMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
 func (p *LocalParty) String() string {
 	return fmt.Sprintf("id: %s, %s", p.PartyID(), p.BaseParty.String())
 }
-
-func (p *LocalParty) Round() int {
-	return p.BaseParty.RoundNumber()
-}

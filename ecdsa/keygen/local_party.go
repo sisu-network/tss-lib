@@ -179,7 +179,3 @@ func (p *LocalParty) PartyID() *tss.PartyID {
 func (p *LocalParty) String() string {
 	return fmt.Sprintf("id: %s, %s", p.PartyID(), p.BaseParty.String())
 }
-
-func (p *LocalParty) Round() int {
-	return p.BaseParty.RoundNumber()
-}

@@ -36,7 +36,6 @@ type Party interface {
 	WrapError(err error, culprits ...*PartyID) *Error
 	PartyID() *PartyID
 	String() string
-	Round() int
 
 	// Private lifecycle methods
 	setRound(Round) *Error
@@ -88,10 +87,6 @@ func (p *BaseParty) ValidateMessage(msg ParsedMessage) (bool, *Error) {
 
 func (p *BaseParty) String() string {
 	return fmt.Sprintf("round: %d", p.round().RoundNumber())
-}
-
-func (p *BaseParty) RoundNumber() int {
-	return p.round().RoundNumber()
 }
 
 // -----
