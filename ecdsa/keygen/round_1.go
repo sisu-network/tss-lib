@@ -1,10 +1,3 @@
-// Copyright © Sisu network contributors
-//
-// This file is a derived work from Binance's tss-lib. Please refer to the
-// LICENSE copyright file at the root directory for usage of the source code.
-//
-// Original license:
-//
 // Copyright © 2019 Binance
 //
 // This file is part of Binance. The full Binance copyright notice, including
@@ -20,7 +13,7 @@ import (
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
 	cmts "github.com/sisu-network/tss-lib/crypto/commitments"
-	"github.com/sisu-network/tss-lib/crypto/dlnproof"
+	"github.com/sisu-network/tss-lib/crypto/dlnp"
 	"github.com/sisu-network/tss-lib/crypto/vss"
 	"github.com/sisu-network/tss-lib/tss"
 )
@@ -99,8 +92,8 @@ func (round *round1) Start() *tss.Error {
 		preParams.P,
 		preParams.Q,
 		preParams.NTildei
-	dlnProof1 := dlnproof.NewDLNProof(h1i, h2i, alpha, p, q, NTildei)
-	dlnProof2 := dlnproof.NewDLNProof(h2i, h1i, beta, p, q, NTildei)
+	dlnProof1 := dlnp.NewProof(h1i, h2i, alpha, p, q, NTildei)
+	dlnProof2 := dlnp.NewProof(h2i, h1i, beta, p, q, NTildei)
 
 	// for this P: SAVE
 	// - shareID

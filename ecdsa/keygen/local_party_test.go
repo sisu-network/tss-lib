@@ -1,10 +1,3 @@
-// Copyright © Sisu network contributors
-//
-// This file is a derived work from Binance's tss-lib. Please refer to the
-// LICENSE copyright file at the root directory for usage of the source code.
-//
-// Original license:
-//
 // Copyright © 2019 Binance
 //
 // This file is part of Binance. The full Binance copyright notice, including
@@ -29,7 +22,7 @@ import (
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
-	"github.com/sisu-network/tss-lib/crypto/dlnproof"
+	"github.com/sisu-network/tss-lib/crypto/dlnp"
 	"github.com/sisu-network/tss-lib/crypto/paillier"
 	"github.com/sisu-network/tss-lib/crypto/vss"
 	"github.com/sisu-network/tss-lib/test"
@@ -159,7 +152,7 @@ func TestBadMessageCulprits(t *testing.T) {
 		assert.FailNow(t, err.Error())
 	}
 
-	badMsg, _ := NewKGRound1Message(pIDs[1], zero, &paillier.PublicKey{N: zero}, zero, zero, zero, new(dlnproof.Proof), new(dlnproof.Proof))
+	badMsg, _ := NewKGRound1Message(pIDs[1], zero, &paillier.PublicKey{N: zero}, zero, zero, zero, new(dlnp.Proof), new(dlnp.Proof))
 	ok, err2 := lp.Update(badMsg)
 	t.Log(err2)
 	assert.False(t, ok)
@@ -169,8 +162,7 @@ func TestBadMessageCulprits(t *testing.T) {
 	assert.Equal(t, 1, len(err2.Culprits()))
 	assert.Equal(t, pIDs[1], err2.Culprits()[0])
 	assert.Equal(t,
-		// "task ecdsa-keygen, party {0,P[1]}, round 1, culprits [{1,2}]: message failed ValidateBasic: Type: sisu.tss-lib.ecdsa.keygen.KGRound1Message, From: {1,2}, To: all",
-		"task ecdsa-keygen, party {0,P[1]}, round 1, culprits [{1,2}]: message failed ValidateBasic: Type: KGRound1Message, From: {1,2}, To: all",
+		"task ecdsa-keygen, party {0,P[1]}, round 1, culprits [{1,2}]: message failed ValidateBasic: Type: KGRound1Message, From: {1,2}",
 		err2.Error())
 }
 

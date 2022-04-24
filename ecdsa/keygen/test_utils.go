@@ -1,10 +1,3 @@
-// Copyright © Sisu network contributors
-//
-// This file is a derived work from Binance's tss-lib. Please refer to the
-// LICENSE copyright file at the root directory for usage of the source code.
-//
-// Original license:
-//
 // Copyright © 2019 Binance
 //
 // This file is part of Binance. The full Binance copyright notice, including
@@ -25,18 +18,19 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
 const (
 	// To change these parameters, you must first delete the text fixture files in test/_fixtures/ and then run the keygen test alone.
 	// Then the signing and resharing tests will work with the new n, t configuration using the newly written fixture files.
-	TestParticipants = 20
-	TestThreshold    = TestParticipants / 2
+	TestParticipants = test.TestParticipants
+	TestThreshold    = test.TestParticipants / 2
 )
 const (
-	testKeygenFixtureDirFormat  = "%s/../../test/_ecdsa_keygen_fixtures"
-	testKeygenFixtureFileFormat = "keygen_data_%d.json"
+	testFixtureDirFormat  = "%s/../../test/_ecdsa_fixtures"
+	testFixtureFileFormat = "keygen_data_%d.json"
 )
 
 func LoadKeygenTestFixtures(qty int, optionalStart ...int) ([]LocalPartySaveData, tss.SortedPartyIDs, error) {
@@ -121,6 +115,6 @@ func LoadNTildeH1H2FromTestFixture(idx int) (NTildei, h1i, h2i *big.Int, err err
 func makeTestFixtureFilePath(partyIndex int) string {
 	_, callerFileName, _, _ := runtime.Caller(0)
 	srcDirName := filepath.Dir(callerFileName)
-	fixtureDirName := fmt.Sprintf(testKeygenFixtureDirFormat, srcDirName)
-	return fmt.Sprintf("%s/"+testKeygenFixtureFileFormat, fixtureDirName, partyIndex)
+	fixtureDirName := fmt.Sprintf(testFixtureDirFormat, srcDirName)
+	return fmt.Sprintf("%s/"+testFixtureFileFormat, fixtureDirName, partyIndex)
 }

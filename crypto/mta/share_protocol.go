@@ -1,10 +1,3 @@
-// Copyright © Sisu network contributors
-//
-// This file is a derived work from Binance's tss-lib. Please refer to the
-// LICENSE copyright file at the root directory for usage of the source code.
-//
-// Original license:
-//
 // Copyright © 2019 Binance
 //
 // This file is part of Binance. The full Binance copyright notice, including
@@ -25,14 +18,9 @@ import (
 
 func AliceInit(
 	pkA *paillier.PublicKey,
-	a, NTildeB, h1B, h2B *big.Int,
-) (cA *big.Int, pf *RangeProofAlice, err error) {
-	cA, rA, err := pkA.EncryptAndReturnRandomness(a)
-	if err != nil {
-		return nil, nil, err
-	}
-	pf, err = ProveRangeAlice(pkA, cA, NTildeB, h1B, h2B, a, rA)
-	return cA, pf, err
+	a, cA, rA, NTildeB, h1B, h2B *big.Int,
+) (pf *RangeProofAlice, err error) {
+	return ProveRangeAlice(pkA, cA, NTildeB, h1B, h2B, a, rA)
 }
 
 func BobMid(
@@ -50,12 +38,10 @@ func BobMid(
 	if err != nil {
 		return
 	}
-	cB, err = pkA.HomoMult(b, cA)
-	if err != nil {
+	if cB, err = pkA.HomoMult(b, cA); err != nil {
 		return
 	}
-	cB, err = pkA.HomoAdd(cB, cBetaPrm)
-	if err != nil {
+	if cB, err = pkA.HomoAdd(cB, cBetaPrm); err != nil {
 		return
 	}
 	beta = common.ModInt(q).Sub(zero, betaPrm)
@@ -68,12 +54,11 @@ func BobMidWC(
 	pf *RangeProofAlice,
 	b, cA, NTildeA, h1A, h2A, NTildeB, h1B, h2B *big.Int,
 	B *crypto.ECPoint,
-) (beta, cB, betaPrm *big.Int, piB *ProofBobWC, err error) {
+) (betaPrm, cB *big.Int, piB *ProofBobWC, err error) {
 	if !pf.Verify(pkA, NTildeB, h1B, h2B, cA) {
 		err = errors.New("RangeProofAlice.Verify() returned false")
 		return
 	}
-	q := tss.EC().Params().N
 	betaPrm = common.GetRandomPositiveInt(pkA.N)
 	cBetaPrm, cRand, err := pkA.EncryptAndReturnRandomness(betaPrm)
 	if err != nil {
@@ -87,7 +72,6 @@ func BobMidWC(
 	if err != nil {
 		return
 	}
-	beta = common.ModInt(q).Sub(zero, betaPrm)
 	piB, err = ProveBobWC(pkA, NTildeA, h1A, h2A, cA, cB, b, betaPrm, cRand, B)
 	return
 }
@@ -97,16 +81,17 @@ func AliceEnd(
 	pf *ProofBob,
 	h1A, h2A, cA, cB, NTildeA *big.Int,
 	sk *paillier.PrivateKey,
-) (*big.Int, error) {
+) (alphaIJ *big.Int, err error) {
 	if !pf.Verify(pkA, NTildeA, h1A, h2A, cA, cB) {
-		return nil, errors.New("ProofBob.Verify() returned false")
+		err = errors.New("ProofBob.Verify() returned false")
+		return
 	}
-	alphaPrm, err := sk.Decrypt(cB)
-	if err != nil {
-		return nil, err
+	if alphaIJ, err = sk.Decrypt(cB); err != nil {
+		return
 	}
 	q := tss.EC().Params().N
-	return new(big.Int).Mod(alphaPrm, q), nil
+	alphaIJ.Mod(alphaIJ, q)
+	return
 }
 
 func AliceEndWC(
@@ -115,14 +100,15 @@ func AliceEndWC(
 	B *crypto.ECPoint,
 	cA, cB, NTildeA, h1A, h2A *big.Int,
 	sk *paillier.PrivateKey,
-) (*big.Int, error) {
+) (muIJ, muIJRec, muIJRand *big.Int, err error) {
 	if !pf.Verify(pkA, NTildeA, h1A, h2A, cA, cB, B) {
-		return nil, errors.New("ProofBobWC.Verify() returned false")
+		err = errors.New("ProofBobWC.Verify() returned false")
+		return
 	}
-	alphaPrm, err := sk.Decrypt(cB)
-	if err != nil {
-		return nil, err
+	if muIJRec, muIJRand, err = sk.DecryptAndRecoverRandomness(cB); err != nil {
+		return
 	}
 	q := tss.EC().Params().N
-	return new(big.Int).Mod(alphaPrm, q), nil
+	muIJ = new(big.Int).Mod(muIJRec, q)
+	return
 }

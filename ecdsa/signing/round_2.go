@@ -1,8 +1,14 @@
-package presign
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
+package signing
 
 import (
 	"errors"
-	sync "sync"
+	"sync"
 
 	errorspkg "github.com/pkg/errors"
 
@@ -14,7 +20,6 @@ func (round *round2) Start() *tss.Error {
 	if round.started {
 		return round.WrapError(errors.New("round already started"))
 	}
-
 	round.number = 2
 	round.started = true
 	round.resetOK()
@@ -32,16 +37,16 @@ func (round *round2) Start() *tss.Error {
 		// Bob_mid
 		go func(j int, Pj *tss.PartyID) {
 			defer wg.Done()
-			r1msg := round.temp.presignRound1Message1s[j].Content().(*PresignRound1Message1)
+			r1msg := round.temp.signRound1Message1s[j].Content().(*SignRound1Message1)
 			rangeProofAliceJ, err := r1msg.UnmarshalRangeProofAlice()
 			if err != nil {
-				errChs <- round.WrapError(errorspkg.Wrapf(err, "UnmarshalRangeProofAlice failed"), Pj)
+				errChs <- round.WrapError(errorspkg.Wrapf(err, "MtA: UnmarshalRangeProofAlice failed"), Pj)
 				return
 			}
-			beta, c1ji, _, pi1ji, err := mta.BobMid(
+			betaJI, c1JI, _, pi1JI, err := mta.BobMid(
 				round.key.PaillierPKs[j],
 				rangeProofAliceJ,
-				round.temp.gamma,
+				round.temp.gammaI,
 				r1msg.UnmarshalC(),
 				round.key.NTildej[j],
 				round.key.H1j[j],
@@ -49,27 +54,29 @@ func (round *round2) Start() *tss.Error {
 				round.key.NTildej[i],
 				round.key.H1j[i],
 				round.key.H2j[i])
-			// should be thread safe as these are pre-allocated
-			round.temp.betas[j] = beta
-			round.temp.c1jis[j] = c1ji
-			round.temp.pi1jis[j] = pi1ji
 			if err != nil {
 				errChs <- round.WrapError(err, Pj)
+				return
 			}
+			// should be thread safe as these are pre-allocated
+			round.temp.betas[j] = betaJI
+			round.temp.r5AbortData.BetaJI[j] = betaJI.Bytes()
+			round.temp.pI1JIs[j] = pi1JI
+			round.temp.c1JIs[j] = c1JI
 		}(j, Pj)
 		// Bob_mid_wc
 		go func(j int, Pj *tss.PartyID) {
 			defer wg.Done()
-			r1msg := round.temp.presignRound1Message1s[j].Content().(*PresignRound1Message1)
+			r1msg := round.temp.signRound1Message1s[j].Content().(*SignRound1Message1)
 			rangeProofAliceJ, err := r1msg.UnmarshalRangeProofAlice()
 			if err != nil {
-				errChs <- round.WrapError(errorspkg.Wrapf(err, "UnmarshalRangeProofAlice failed"), Pj)
+				errChs <- round.WrapError(errorspkg.Wrapf(err, "MtA: UnmarshalRangeProofAlice failed"), Pj)
 				return
 			}
-			v, c2ji, _, pi2ji, err := mta.BobMidWC(
+			vJI, c2JI, pi2JI, err := mta.BobMidWC(
 				round.key.PaillierPKs[j],
 				rangeProofAliceJ,
-				round.temp.w,
+				round.temp.wI,
 				r1msg.UnmarshalC(),
 				round.key.NTildej[j],
 				round.key.H1j[j],
@@ -78,12 +85,13 @@ func (round *round2) Start() *tss.Error {
 				round.key.H1j[i],
 				round.key.H2j[i],
 				round.temp.bigWs[i])
-			round.temp.vs[j] = v
-			round.temp.c2jis[j] = c2ji
-			round.temp.pi2jis[j] = pi2ji
 			if err != nil {
 				errChs <- round.WrapError(err, Pj)
+				return
 			}
+			round.temp.vJIs[j] = vJI
+			round.temp.pI2JIs[j] = pi2JI
+			round.temp.c2JIs[j] = c2JI
 		}(j, Pj)
 	}
 	// consume error channels; wait for goroutines
@@ -94,7 +102,7 @@ func (round *round2) Start() *tss.Error {
 		culprits = append(culprits, err.Culprits()...)
 	}
 	if len(culprits) > 0 {
-		return round.WrapError(errors.New("failed to calculate Bob_mid or Bob_mid_wc"), culprits...)
+		return round.WrapError(errors.New("MtA: failed to verify Bob_mid or Bob_mid_wc"), culprits...)
 	}
 	// create and send messages
 	for j, Pj := range round.Parties().IDs() {
@@ -102,15 +110,18 @@ func (round *round2) Start() *tss.Error {
 			continue
 		}
 		r2msg := NewSignRound2Message(
-			Pj, round.PartyID(), round.temp.c1jis[j], round.temp.pi1jis[j], round.temp.c2jis[j], round.temp.pi2jis[j])
+			Pj, round.PartyID(),
+			round.temp.c1JIs[j],
+			round.temp.pI1JIs[j],
+			round.temp.c2JIs[j],
+			round.temp.pI2JIs[j])
 		round.out <- r2msg
 	}
-
 	return nil
 }
 
 func (round *round2) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.presignRound2Messages {
+	for j, msg := range round.temp.signRound2Messages {
 		if round.ok[j] {
 			continue
 		}
@@ -123,7 +134,7 @@ func (round *round2) Update() (bool, *tss.Error) {
 }
 
 func (round *round2) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*PresignRound2Message); ok {
+	if _, ok := msg.Content().(*SignRound2Message); ok {
 		return !msg.IsBroadcast()
 	}
 	return false

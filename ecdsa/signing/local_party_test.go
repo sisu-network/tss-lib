@@ -1,40 +1,69 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package signing
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"runtime"
 	"sync/atomic"
 	"testing"
 
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/ipfs/go-log"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sisu-network/tss-lib/common"
-	"github.com/sisu-network/tss-lib/ecdsa/presign"
+	"github.com/sisu-network/tss-lib/crypto"
+	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestSigning(t *testing.T) {
-	n := 11
-	threshold := n - 1
+const (
+	testParticipants = test.TestParticipants
+	testThreshold    = test.TestThreshold
+)
 
-	savedData := presign.LoadPresignData(n)
-	p2pCtx := tss.NewPeerContext(savedData[0].PartyIds)
-	parties := make([]*LocalParty, 0, len(savedData))
+func setUp(level string) {
+	if err := log.SetLogLevel("tss-lib", level); err != nil {
+		panic(err)
+	}
+}
 
-	errCh := make(chan *tss.Error, len(savedData))
-	outCh := make(chan tss.Message, len(savedData))
-	endCh := make(chan common.SignatureData, len(savedData))
+func TestE2EConcurrent(t *testing.T) {
+	setUp("info")
+	threshold := testThreshold
+
+	// PHASE: load keygen fixtures
+	keys, signPIDs, err := keygen.LoadKeygenTestFixturesRandomSet(testThreshold+1, testParticipants)
+	assert.NoError(t, err, "should load keygen fixtures")
+	assert.Equal(t, testThreshold+1, len(keys))
+	assert.Equal(t, testThreshold+1, len(signPIDs))
+
+	// PHASE: signing
+	// use a shuffled selection of the list of parties for this test
+	p2pCtx := tss.NewPeerContext(signPIDs)
+	parties := make([]*LocalParty, 0, len(signPIDs))
+
+	errCh := make(chan *tss.Error, len(signPIDs))
+	outCh := make(chan tss.Message, len(signPIDs))
+	endCh := make(chan *SignatureData, len(signPIDs))
 
 	updater := test.SharedPartyUpdater
 
-	msgInt := new(big.Int).SetBytes([]byte("this is a test"))
-	for i := 0; i < n; i++ {
-		params := tss.NewParameters(p2pCtx, savedData[i].PartyIds[i], len(savedData), threshold)
-		P := NewLocalParty(msgInt, params, savedData[i], outCh, endCh).(*LocalParty)
+	// init the parties
+	msg := common.GetRandomPrimeInt(256)
+	for i := 0; i < len(signPIDs); i++ {
+		params := tss.NewParameters(p2pCtx, signPIDs[i], len(signPIDs), threshold)
 
+		P := NewLocalParty(msg, params, keys[i], outCh, endCh).(*LocalParty)
 		parties = append(parties, P)
-
 		go func(P *LocalParty) {
 			if err := P.Start(); err != nil {
 				errCh <- err
@@ -43,15 +72,14 @@ func TestSigning(t *testing.T) {
 	}
 
 	var ended int32
-
 signing:
 	for {
-		// fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
+		fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
 		select {
 		case err := <-errCh:
 			common.Logger.Errorf("Error: %s", err)
 			assert.FailNow(t, err.Error())
-			return
+			break signing
 
 		case msg := <-outCh:
 			dest := msg.GetTo()
@@ -69,20 +97,47 @@ signing:
 				go updater(parties[dest[0].Index], msg, errCh)
 			}
 
-		case <-endCh:
+		case data := <-endCh:
 			atomic.AddInt32(&ended, 1)
-			if atomic.LoadInt32(&ended) == int32(len(savedData)) {
-				fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
-				fmt.Println("All tasks finished")
+			if atomic.LoadInt32(&ended) == int32(len(signPIDs)) {
+				t.Logf("Done. Received signature data from %d participants %+v", ended, data)
+
+				// bigR is stored as bytes for the OneRoundData protobuf struct
+				bigRX, bigRY := new(big.Int).SetBytes(parties[0].temp.BigR.GetX()), new(big.Int).SetBytes(parties[0].temp.BigR.GetY())
+				bigR := crypto.NewECPointNoCurveCheck(tss.EC(), bigRX, bigRY)
+
+				r := parties[0].temp.rI.X()
+				fmt.Printf("sign result: R(%s, %s), r=%s\n", bigR.X().String(), bigR.Y().String(), r.String())
+
+				modN := common.ModInt(tss.EC().Params().N)
+
+				// BEGIN check s correctness
+				sumS := big.NewInt(0)
+				for _, p := range parties {
+					sumS = modN.Add(sumS, p.temp.sI)
+				}
+				fmt.Printf("S: %s\n", sumS.String())
+				// END check s correctness
+
+				// BEGIN ECDSA verify
+				pkX, pkY := keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y()
+				pk := ecdsa.PublicKey{
+					Curve: tss.EC(),
+					X:     pkX,
+					Y:     pkY,
+				}
+				ok := ecdsa.Verify(&pk, msg.Bytes(), bigR.X(), sumS)
+				assert.True(t, ok, "ecdsa verify must pass")
+
+				btcecSig := &btcec.Signature{R: r, S: sumS}
+				btcecSig.Verify(msg.Bytes(), (*btcec.PublicKey)(&pk))
+				assert.True(t, ok, "ecdsa verify 2 must pass")
+
+				t.Log("ECDSA signing test done.")
+				// END ECDSA verify
+
 				break signing
 			}
 		}
-	}
-
-	// Check that everyone has the same signature. The signature verification is done in the
-	// final round.
-	for _, p := range parties {
-		assert.Equal(t, p.sigData.R, parties[0].sigData.R)
-		assert.Equal(t, p.sigData.S, parties[0].sigData.S)
 	}
 }

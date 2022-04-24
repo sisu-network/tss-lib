@@ -1,10 +1,3 @@
-// Copyright © Sisu network contributors
-//
-// This file is a derived work from Binance's tss-lib. Please refer to the
-// LICENSE copyright file at the root directory for usage of the source code.
-//
-// Original license:
-//
 // Copyright © 2019 Binance
 //
 // This file is part of Binance. The full Binance copyright notice, including
@@ -42,14 +35,14 @@ func MustGetRandomInt(bits int) *big.Int {
 	return n
 }
 
-func GetRandomPositiveInt(lessThan *big.Int) *big.Int {
-	if lessThan == nil || zero.Cmp(lessThan) != -1 {
+func GetRandomPositiveInt(upper *big.Int) *big.Int {
+	if upper == nil || zero.Cmp(upper) != -1 {
 		return nil
 	}
 	var try *big.Int
 	for {
-		try = MustGetRandomInt(lessThan.BitLen())
-		if try.Cmp(lessThan) < 0 && try.Cmp(zero) >= 0 {
+		try = MustGetRandomInt(upper.BitLen())
+		if try.Cmp(upper) < 0 && try.Cmp(zero) >= 0 {
 			break
 		}
 	}

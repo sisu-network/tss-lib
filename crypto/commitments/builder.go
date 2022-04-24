@@ -1,11 +1,4 @@
-// Copyright © Sisu network contributors
-//
-// This file is a derived work from Binance's tss-lib. Please refer to the
-// LICENSE copyright file at the root directory for usage of the source code.
-//
-// Original license:
-//
-// Copyright © 2019-2020 Binance
+// Copyright © 2019 Binance
 //
 // This file is part of Binance. The full Binance copyright notice, including
 // terms governing use, modification, and redistribution, is contained in the
@@ -21,7 +14,7 @@ import (
 
 const (
 	PartsCap    = 3
-	MaxPartSize = int64(1 * 1024 * 1024) // 1 MB - rather liberal
+	MaxPartSize = int64(1 * 1024 * 128) // ~128 KB
 )
 
 type builder struct {
@@ -38,7 +31,7 @@ func (b *builder) Parts() [][]*big.Int {
 	return b.parts[:]
 }
 
-func (b *builder) AddPart(part []*big.Int) *builder {
+func (b *builder) AddPart(part ...*big.Int) *builder {
 	b.parts = append(b.parts, part[:])
 	return b
 }
@@ -77,6 +70,9 @@ func ParseSecrets(secrets []*big.Int) ([][]*big.Int, error) {
 		}
 		if isLenEl {
 			nextPartLen = secrets[el].Int64()
+			if nextPartLen <= 0 {
+				return nil, fmt.Errorf("ParseSecrets: commitment part len is 0 or negative: part %d, len %d", len(parts), nextPartLen)
+			}
 			if MaxPartSize < nextPartLen {
 				return nil, fmt.Errorf("ParseSecrets: commitment part too large: part %d, size %d", len(parts), nextPartLen)
 			}
