@@ -20,7 +20,7 @@ import (
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
-	"github.com/sisu-network/tss-lib/ecdsa/keygen"
+	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
 )
@@ -41,9 +41,9 @@ func TestE2EConcurrent(t *testing.T) {
 	threshold := testThreshold
 
 	// PHASE: load keygen fixtures
-	keys, signPIDs, err := keygen.LoadKeygenTestFixturesRandomSet(testThreshold+1, testParticipants)
+	presigns, signPIDs, err := presign.LoadPresignTestFixture(testThreshold+1, testParticipants)
 	assert.NoError(t, err, "should load keygen fixtures")
-	assert.Equal(t, testThreshold+1, len(keys))
+	assert.Equal(t, testThreshold+1, len(presigns))
 	assert.Equal(t, testThreshold+1, len(signPIDs))
 
 	// PHASE: signing
@@ -62,7 +62,7 @@ func TestE2EConcurrent(t *testing.T) {
 	for i := 0; i < len(signPIDs); i++ {
 		params := tss.NewParameters(p2pCtx, signPIDs[i], len(signPIDs), threshold)
 
-		P := NewLocalParty(msg, params, keys[i], outCh, endCh).(*LocalParty)
+		P := NewLocalParty(msg, params, presigns[i], outCh, endCh).(*LocalParty)
 		parties = append(parties, P)
 		go func(P *LocalParty) {
 			if err := P.Start(); err != nil {
@@ -120,7 +120,7 @@ signing:
 				// END check s correctness
 
 				// BEGIN ECDSA verify
-				pkX, pkY := keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y()
+				pkX, pkY := presigns[0].ECDSAPub.X(), presigns[0].ECDSAPub.Y()
 				pk := ecdsa.PublicKey{
 					Curve: tss.EC(),
 					X:     pkX,

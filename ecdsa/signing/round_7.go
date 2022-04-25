@@ -29,66 +29,7 @@ func (round *round7) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
-	N := tss.EC().Params().N
-	modN := common.ModInt(N)
-
 	culprits := make([]*tss.PartyID, 0, len(round.temp.signRound6Messages))
-
-	// Identifiable Abort Type 5 triggered during Phase 5 (GG20)
-	if round.abortingT5 {
-		common.Logger.Infof("round 7: Abort Type 5 code path triggered")
-	outer:
-		for j, msg := range round.temp.signRound6Messages {
-			if j == i {
-				continue
-			}
-			Pj := round.Parties().IDs()[j]
-			r3msg := round.temp.signRound3Messages[j].Content().(*SignRound3Message)
-			r6msgInner, ok := msg.Content().(*SignRound6Message).GetContent().(*SignRound6Message_Abort)
-			if !ok {
-				common.Logger.Warnf("round 7: unexpected success message while in aborting mode: %+v", r6msgInner)
-				culprits = append(culprits, Pj)
-				continue
-			}
-			r6msg := r6msgInner.Abort
-
-			// Check that value gamma_j (in MtA) is consistent with bigGamma_j that is de-committed in Phase 4
-			gammaJ := new(big.Int).SetBytes(r6msg.GetGammaI())
-			gammaJG := crypto.ScalarBaseMult(tss.EC(), gammaJ)
-			if !gammaJG.Equals(round.temp.bigGammaJs[j]) {
-				culprits = append(culprits, Pj)
-				continue
-			}
-
-			kJ := new(big.Int).SetBytes(r6msg.GetKI())
-			calcDeltaJ := modN.Mul(kJ, gammaJ)
-			for k, a := range r6msg.GetAlphaIJ() {
-				if k == j {
-					continue
-				}
-				if a == nil {
-					culprits = append(culprits, Pj)
-					continue outer
-				}
-				calcDeltaJ = modN.Add(calcDeltaJ, new(big.Int).SetBytes(a))
-			}
-			for k, b := range r6msg.GetBetaJI() {
-				if k == j {
-					continue
-				}
-				if b == nil {
-					culprits = append(culprits, Pj)
-					continue outer
-				}
-				calcDeltaJ = modN.Add(calcDeltaJ, new(big.Int).SetBytes(b))
-			}
-			if expDeltaJ := new(big.Int).SetBytes(r3msg.GetDeltaI()); expDeltaJ.Cmp(calcDeltaJ) != 0 {
-				culprits = append(culprits, Pj)
-				continue
-			}
-		}
-		return round.WrapError(errors.New("round 6 consistency check failed: g != R products, Type 5 identified abort, culprits known"), culprits...)
-	}
 
 	// bigR is stored as bytes for the OneRoundData protobuf struct
 	bigRX, bigRY := new(big.Int).SetBytes(round.temp.BigR.GetX()), new(big.Int).SetBytes(round.temp.BigR.GetY())
@@ -159,7 +100,7 @@ func (round *round7) Start() *tss.Error {
 
 	round.temp.rI = bigR
 	round.temp.BigSJ = bigSJ
-	if y := round.key.ECDSAPub; !bigSJProducts.Equals(y) {
+	if y := round.presignData.ECDSAPub; !bigSJProducts.Equals(y) {
 		round.abortingT7 = true
 		common.Logger.Warnf("round 7: consistency check failed: y != bigSJ products, entering Type 7 identified abort")
 

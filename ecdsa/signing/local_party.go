@@ -15,7 +15,7 @@ import (
 	"github.com/sisu-network/tss-lib/crypto"
 	cmt "github.com/sisu-network/tss-lib/crypto/commitments"
 	"github.com/sisu-network/tss-lib/crypto/mta"
-	"github.com/sisu-network/tss-lib/ecdsa/keygen"
+	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -29,9 +29,9 @@ type (
 		*tss.BaseParty
 		params *tss.Parameters
 
-		keys keygen.LocalPartySaveData
-		temp localTempData
-		data SignatureData
+		presignData presign.LocalPresignData
+		temp        localTempData
+		data        SignatureData
 
 		// outbound messaging
 		out chan<- tss.Message
@@ -95,19 +95,19 @@ type (
 func NewLocalParty(
 	msg *big.Int,
 	params *tss.Parameters,
-	key keygen.LocalPartySaveData,
+	presignData presign.LocalPresignData,
 	out chan<- tss.Message,
 	end chan<- *SignatureData,
 ) tss.Party {
 	partyCount := len(params.Parties().IDs())
 	p := &LocalParty{
-		BaseParty: new(tss.BaseParty),
-		params:    params,
-		keys:      keygen.BuildLocalSaveDataSubset(key, params.Parties().IDs()),
-		temp:      localTempData{},
-		data:      SignatureData{},
-		out:       out,
-		end:       end,
+		BaseParty:   new(tss.BaseParty),
+		params:      params,
+		presignData: presignData,
+		temp:        localTempData{},
+		data:        SignatureData{},
+		out:         out,
+		end:         end,
 	}
 	// msgs init
 	p.temp.signRound1Message1s = make([]tss.ParsedMessage, partyCount)
@@ -134,18 +134,8 @@ func NewLocalParty(
 	return p
 }
 
-// Constructs a new ECDSA signing party for one-round signing. The final SignatureData struct will be a partial struct containing only the data for a final signing round (see the readme).
-func NewLocalPartyWithOneRoundSign(
-	params *tss.Parameters,
-	key keygen.LocalPartySaveData,
-	out chan<- tss.Message,
-	end chan<- *SignatureData,
-) tss.Party {
-	return NewLocalParty(nil, params, key, out, end)
-}
-
 func (p *LocalParty) FirstRound() tss.Round {
-	return newRound1(p.params, &p.keys, &p.data, &p.temp, p.out, p.end)
+	return newRound1(p.params, &p.presignData, &p.data, &p.temp, p.out, p.end)
 }
 
 func (p *LocalParty) Start() *tss.Error {
