@@ -38,7 +38,7 @@ func (round *finalization) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
-	culprits := make([]*tss.PartyID, 0, len(round.temp.signRound6Messages))
+	culprits := make([]*tss.PartyID, 0, len(round.temp.presignRound6Messages))
 
 	// Identifiable Abort Type 7 triggered during Phase 6 (GG20)
 	if round.abortingT7 {
@@ -55,7 +55,7 @@ func (round *finalization) Start() *tss.Error {
 			gNus[j] = make([]*crypto.ECPoint, len(Ps))
 		}
 	outer:
-		for j, msg := range round.temp.signRound7Messages {
+		for j, msg := range round.temp.presignRound7Messages {
 			Pj := round.Parties().IDs()[j]
 			var err error
 			var paiPKJ *paillier.PublicKey
@@ -91,7 +91,7 @@ func (round *finalization) Start() *tss.Error {
 			cA, err := paiPKJ.EncryptWithChosenRandomness(
 				new(big.Int).SetBytes(r7msg.GetKI()),
 				new(big.Int).SetBytes(r7msg.GetKRandI()))
-			r1msg1 := round.temp.signRound1Message1s[j].Content().(*PresignRound1Message1)
+			r1msg1 := round.temp.presignRound1Message1s[j].Content().(*PresignRound1Message1)
 			if err != nil || !bytes.Equal(cA.Bytes(), r1msg1.GetC()) {
 				culprits = append(culprits, Pj)
 				continue

@@ -40,8 +40,8 @@ func (round *round6) Start() *tss.Error {
 
 	errs := make(map[*tss.PartyID]error)
 	bigRBarJProducts := (*crypto.ECPoint)(nil)
-	BigRBarJ := make(map[string]*common.ECPoint, len(round.temp.signRound5Messages))
-	for j, msg := range round.temp.signRound5Messages {
+	BigRBarJ := make(map[string]*common.ECPoint, len(round.temp.presignRound5Messages))
+	for j, msg := range round.temp.presignRound5Messages {
 		Pj := round.Parties().IDs()[j]
 		r5msg := msg.Content().(*PresignRound5Message)
 		bigRBarJ, err := r5msg.UnmarshalRI()
@@ -71,7 +71,7 @@ func (round *round6) Start() *tss.Error {
 			errs[Pj] = err
 			continue
 		}
-		r1msg1 := round.temp.signRound1Message1s[j].Content().(*PresignRound1Message1)
+		r1msg1 := round.temp.presignRound1Message1s[j].Content().(*PresignRound1Message1)
 		pdlWSlackStatement := zkp.PDLwSlackStatement{
 			PK:         round.key.PaillierPKs[Pj.Index],
 			CipherText: new(big.Int).SetBytes(r1msg1.GetC()),
@@ -102,7 +102,7 @@ func (round *round6) Start() *tss.Error {
 			common.Logger.Warnf("round 6: consistency check failed: g != R products, entering Type 5 identified abort")
 
 			r6msg := NewSignRound6MessageAbort(Pi, &round.temp.r5AbortData)
-			round.temp.signRound6Messages[i] = r6msg
+			round.temp.presignRound6Messages[i] = r6msg
 			round.out <- r6msg
 			return nil
 		}
@@ -138,13 +138,13 @@ func (round *round6) Start() *tss.Error {
 	round.temp.TI, round.temp.lI = nil, nil
 
 	r6msg := NewSignRound6MessageSuccess(Pi, bigSI, stPf)
-	round.temp.signRound6Messages[i] = r6msg
+	round.temp.presignRound6Messages[i] = r6msg
 	round.out <- r6msg
 	return nil
 }
 
 func (round *round6) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.signRound6Messages {
+	for j, msg := range round.temp.presignRound6Messages {
 		if round.ok[j] {
 			continue
 		}

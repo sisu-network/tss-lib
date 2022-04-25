@@ -24,13 +24,13 @@ func (round *round4) Start() *tss.Error {
 	i := Pi.Index
 
 	r4msg := NewSignRound4Message(Pi, round.temp.deCommit)
-	round.temp.signRound4Messages[i] = r4msg
+	round.temp.presignRound4Messages[i] = r4msg
 	round.out <- r4msg
 	return nil
 }
 
 func (round *round4) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.signRound4Messages {
+	for j, msg := range round.temp.presignRound4Messages {
 		if round.ok[j] {
 			continue
 		}

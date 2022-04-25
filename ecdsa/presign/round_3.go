@@ -46,7 +46,7 @@ func (round *round3) Start() *tss.Error {
 		// Alice_end
 		go func(j int, Pj *tss.PartyID) {
 			defer wg.Done()
-			r2msg := round.temp.signRound2Messages[j].Content().(*PresignRound2Message)
+			r2msg := round.temp.presignRound2Messages[j].Content().(*PresignRound2Message)
 			proofBob, err := r2msg.UnmarshalProofBob()
 			if err != nil {
 				errChs <- round.WrapError(errorspkg.Wrapf(err, "MtA: UnmarshalProofBob failed"), Pj)
@@ -71,7 +71,7 @@ func (round *round3) Start() *tss.Error {
 		// Alice_end_wc
 		go func(j int, Pj *tss.PartyID) {
 			defer wg.Done()
-			r2msg := round.temp.signRound2Messages[j].Content().(*PresignRound2Message)
+			r2msg := round.temp.presignRound2Messages[j].Content().(*PresignRound2Message)
 			proofBobWC, err := r2msg.UnmarshalProofBobWC()
 			if err != nil {
 				errChs <- round.WrapError(errorspkg.Wrapf(err, "MtA: UnmarshalProofBobWC failed"), Pj)
@@ -159,13 +159,13 @@ func (round *round3) Start() *tss.Error {
 	round.temp.sigmaI = sigmaI
 
 	r3msg := NewSignRound3Message(Pi, deltaI, TI, tProof)
-	round.temp.signRound3Messages[i] = r3msg
+	round.temp.presignRound3Messages[i] = r3msg
 	round.out <- r3msg
 	return nil
 }
 
 func (round *round3) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.signRound3Messages {
+	for j, msg := range round.temp.presignRound3Messages {
 		if round.ok[j] {
 			continue
 		}

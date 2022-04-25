@@ -88,26 +88,26 @@ func (round *round1) Start() *tss.Error {
 			return round.WrapError(fmt.Errorf("failed to init mta: %v", err))
 		}
 		r1msg1 := NewSignRound1Message1(Pj, round.PartyID(), cA, pi)
-		round.temp.signRound1Message1s[i] = r1msg1
+		round.temp.presignRound1Message1s[i] = r1msg1
 		round.temp.c1Is[j] = cA
 		round.out <- r1msg1
 	}
 
 	r1msg2 := NewSignRound1Message2(round.PartyID(), cmt.C)
-	round.temp.signRound1Message2s[i] = r1msg2
+	round.temp.presignRound1Message2s[i] = r1msg2
 	round.out <- r1msg2
 	return nil
 }
 
 func (round *round1) Update() (bool, *tss.Error) {
-	for j, msg1 := range round.temp.signRound1Message1s {
+	for j, msg1 := range round.temp.presignRound1Message1s {
 		if round.ok[j] {
 			continue
 		}
 		if msg1 == nil || !round.CanAccept(msg1) {
 			return false, nil
 		}
-		msg2 := round.temp.signRound1Message2s[j]
+		msg2 := round.temp.presignRound1Message2s[j]
 		if msg2 == nil || !round.CanAccept(msg2) {
 			return false, nil
 		}

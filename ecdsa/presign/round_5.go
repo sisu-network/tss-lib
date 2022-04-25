@@ -40,9 +40,9 @@ func (round *round5) Start() *tss.Error {
 		if j == i {
 			continue
 		}
-		r1msg2 := round.temp.signRound1Message2s[j].Content().(*PresignRound1Message2)
-		r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
-		r4msg := round.temp.signRound4Messages[j].Content().(*PresignRound4Message)
+		r1msg2 := round.temp.presignRound1Message2s[j].Content().(*PresignRound1Message2)
+		r3msg := round.temp.presignRound3Messages[j].Content().(*PresignRound3Message)
+		r4msg := round.temp.presignRound4Messages[j].Content().(*PresignRound4Message)
 
 		// calculating Big R
 		SCj, SDj := r1msg2.UnmarshalCommitment(), r4msg.UnmarshalDeCommitment()
@@ -100,13 +100,13 @@ func (round *round5) Start() *tss.Error {
 	pdlWSlackPf := zkp.NewPDLwSlackProof(pdlWSlackWitness, pdlWSlackStatement)
 
 	r5msg := NewSignRound5Message(Pi, bigRBarI, &pdlWSlackPf)
-	round.temp.signRound5Messages[i] = r5msg
+	round.temp.presignRound5Messages[i] = r5msg
 	round.out <- r5msg
 	return nil
 }
 
 func (round *round5) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.signRound5Messages {
+	for j, msg := range round.temp.presignRound5Messages {
 		if round.ok[j] {
 			continue
 		}

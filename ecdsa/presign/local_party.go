@@ -39,14 +39,14 @@ type (
 	}
 
 	localMessageStore struct {
-		signRound1Message1s,
-		signRound1Message2s,
-		signRound2Messages,
-		signRound3Messages,
-		signRound4Messages,
-		signRound5Messages,
-		signRound6Messages,
-		signRound7Messages []tss.ParsedMessage
+		presignRound1Message1s,
+		presignRound1Message2s,
+		presignRound2Messages,
+		presignRound3Messages,
+		presignRound4Messages,
+		presignRound5Messages,
+		presignRound6Messages,
+		presignRound7Messages []tss.ParsedMessage
 	}
 
 	localTempData struct {
@@ -110,14 +110,14 @@ func NewLocalParty(
 		end:       end,
 	}
 	// msgs init
-	p.temp.signRound1Message1s = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound1Message2s = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound2Messages = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound3Messages = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound4Messages = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound5Messages = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound6Messages = make([]tss.ParsedMessage, partyCount)
-	p.temp.signRound7Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound1Message1s = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound1Message2s = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound2Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound3Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound4Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound5Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound6Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound7Messages = make([]tss.ParsedMessage, partyCount)
 	// temp data init
 	p.temp.m = msg
 	p.temp.c1Is = make([]*big.Int, partyCount)
@@ -198,21 +198,21 @@ func (p *LocalParty) StoreMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
 	// this does not handle message replays. we expect the caller to apply replay and spoofing protection.
 	switch msg.Content().(type) {
 	case *PresignRound1Message1:
-		p.temp.signRound1Message1s[fromPIdx] = msg
+		p.temp.presignRound1Message1s[fromPIdx] = msg
 	case *PresignRound1Message2:
-		p.temp.signRound1Message2s[fromPIdx] = msg
+		p.temp.presignRound1Message2s[fromPIdx] = msg
 	case *PresignRound2Message:
-		p.temp.signRound2Messages[fromPIdx] = msg
+		p.temp.presignRound2Messages[fromPIdx] = msg
 	case *PresignRound3Message:
-		p.temp.signRound3Messages[fromPIdx] = msg
+		p.temp.presignRound3Messages[fromPIdx] = msg
 	case *PresignRound4Message:
-		p.temp.signRound4Messages[fromPIdx] = msg
+		p.temp.presignRound4Messages[fromPIdx] = msg
 	case *PresignRound5Message:
-		p.temp.signRound5Messages[fromPIdx] = msg
+		p.temp.presignRound5Messages[fromPIdx] = msg
 	case *PresignRound6Message:
-		p.temp.signRound6Messages[fromPIdx] = msg
+		p.temp.presignRound6Messages[fromPIdx] = msg
 	case *PresignRound7Message:
-		p.temp.signRound7Messages[fromPIdx] = msg
+		p.temp.presignRound7Messages[fromPIdx] = msg
 	default: // unrecognised message, just ignore!
 		common.Logger.Warnf("unrecognised message ignored: %v", msg)
 		return false, nil

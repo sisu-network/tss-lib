@@ -32,18 +32,18 @@ func (round *round7) Start() *tss.Error {
 	N := tss.EC().Params().N
 	modN := common.ModInt(N)
 
-	culprits := make([]*tss.PartyID, 0, len(round.temp.signRound6Messages))
+	culprits := make([]*tss.PartyID, 0, len(round.temp.presignRound6Messages))
 
 	// Identifiable Abort Type 5 triggered during Phase 5 (GG20)
 	if round.abortingT5 {
 		common.Logger.Infof("round 7: Abort Type 5 code path triggered")
 	outer:
-		for j, msg := range round.temp.signRound6Messages {
+		for j, msg := range round.temp.presignRound6Messages {
 			if j == i {
 				continue
 			}
 			Pj := round.Parties().IDs()[j]
-			r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
+			r3msg := round.temp.presignRound3Messages[j].Content().(*PresignRound3Message)
 			r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*PresignRound6Message_Abort)
 			if !ok {
 				common.Logger.Warnf("round 7: unexpected success message while in aborting mode: %+v", r6msgInner)
@@ -99,12 +99,12 @@ func (round *round7) Start() *tss.Error {
 		return round.WrapError(err, Pi)
 	}
 
-	bigSJ := make(map[string]*common.ECPoint, len(round.temp.signRound6Messages))
+	bigSJ := make(map[string]*common.ECPoint, len(round.temp.presignRound6Messages))
 	bigSJProducts := (*crypto.ECPoint)(nil)
 	var multiErr error
-	for j, msg := range round.temp.signRound6Messages {
+	for j, msg := range round.temp.presignRound6Messages {
 		Pj := round.Parties().IDs()[j]
-		r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
+		r3msg := round.temp.presignRound3Messages[j].Content().(*PresignRound3Message)
 		r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*PresignRound6Message_Success)
 		if !ok {
 			culprits = append(culprits, Pj)
@@ -165,7 +165,7 @@ func (round *round7) Start() *tss.Error {
 
 		// If we abort here, one-round mode won't matter now - we will proceed to round "8" anyway.
 		r7msg := NewSignRound7MessageAbort(Pi, &round.temp.r7AbortData)
-		round.temp.signRound7Messages[i] = r7msg
+		round.temp.presignRound7Messages[i] = r7msg
 		round.out <- r7msg
 		return nil
 	}
@@ -184,7 +184,7 @@ func (round *round7) Start() *tss.Error {
 
 func (round *round7) Update() (bool, *tss.Error) {
 	// Collect messages for the full online protocol OR identified abort of type 7.
-	for j, msg := range round.temp.signRound7Messages {
+	for j, msg := range round.temp.presignRound7Messages {
 		if round.ok[j] {
 			continue
 		}
