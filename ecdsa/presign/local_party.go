@@ -31,7 +31,6 @@ type (
 
 		keys keygen.LocalPartySaveData
 		temp localTempData
-		data SignatureData
 
 		// outbound messaging
 		out chan<- tss.Message
@@ -105,7 +104,6 @@ func NewLocalParty(
 		params:    params,
 		keys:      keygen.BuildLocalSaveDataSubset(key, params.Parties().IDs()),
 		temp:      localTempData{},
-		data:      SignatureData{},
 		out:       out,
 		end:       end,
 	}
