@@ -108,7 +108,7 @@ func (round *round6) Start() *tss.Error {
 		}
 	}
 	// wipe sensitive data for gc, not used from here
-	round.temp.r5AbortData = SignRound6Message_AbortData{}
+	round.temp.r5AbortData = PresignRound6Message_AbortData{}
 
 	round.temp.BigRBarJ = BigRBarJ
 

@@ -78,7 +78,7 @@ type (
 
 		// round 5
 		bigGammaJs  []*crypto.ECPoint
-		r5AbortData SignRound6Message_AbortData
+		r5AbortData PresignRound6Message_AbortData
 
 		// round 6
 		*LocalPresignData
@@ -87,7 +87,7 @@ type (
 		sI *big.Int
 		rI,
 		TI *crypto.ECPoint
-		r7AbortData SignRound7Message_AbortData
+		r7AbortData PresignRound7Message_AbortData
 	}
 )
 

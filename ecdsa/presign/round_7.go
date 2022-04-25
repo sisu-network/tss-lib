@@ -44,7 +44,7 @@ func (round *round7) Start() *tss.Error {
 			}
 			Pj := round.Parties().IDs()[j]
 			r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
-			r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*SignRound6Message_Abort)
+			r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*PresignRound6Message_Abort)
 			if !ok {
 				common.Logger.Warnf("round 7: unexpected success message while in aborting mode: %+v", r6msgInner)
 				culprits = append(culprits, Pj)
@@ -105,7 +105,7 @@ func (round *round7) Start() *tss.Error {
 	for j, msg := range round.temp.signRound6Messages {
 		Pj := round.Parties().IDs()[j]
 		r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
-		r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*SignRound6Message_Success)
+		r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*PresignRound6Message_Success)
 		if !ok {
 			culprits = append(culprits, Pj)
 			multiErr = multierror.Append(multiErr, fmt.Errorf("unexpected abort message while in success mode: %+v", r6msgInner))
@@ -171,7 +171,7 @@ func (round *round7) Start() *tss.Error {
 	}
 
 	// wipe sensitive data for gc, not used from here
-	round.temp.r7AbortData = SignRound7Message_AbortData{}
+	round.temp.r7AbortData = PresignRound7Message_AbortData{}
 
 	round.temp.T = int32(len(round.Parties().IDs()) - 1)
 

@@ -65,7 +65,7 @@ func (round *finalization) Start() *tss.Error {
 				paiPKJ = round.key.PaillierPKs[j]
 			}
 
-			r7msgInner, ok := msg.Content().(*PresignRound7Message).GetContent().(*SignRound7Message_Abort)
+			r7msgInner, ok := msg.Content().(*PresignRound7Message).GetContent().(*PresignRound7Message_Abort)
 			if !ok {
 				common.Logger.Warnf("round 8: unexpected success message while in aborting mode: %+v", r7msgInner)
 				culprits = append(culprits, Pj)
