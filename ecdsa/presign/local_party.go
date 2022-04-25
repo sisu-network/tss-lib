@@ -52,7 +52,6 @@ type (
 		localMessageStore
 
 		// temp data (thrown away after sign) / round 1
-		m,
 		wI,
 		cAKI,
 		rAKI,
@@ -90,9 +89,8 @@ type (
 	}
 )
 
-// Constructs a new ECDSA signing party. Note: msg may be left nil for one-round signing mode to only do the pre-processing steps.
+// Constructs a new ECDSA presign party.
 func NewLocalParty(
-	msg *big.Int,
 	params *tss.Parameters,
 	key keygen.LocalPartySaveData,
 	out chan<- tss.Message,
@@ -117,7 +115,6 @@ func NewLocalParty(
 	p.temp.presignRound6Messages = make([]tss.ParsedMessage, partyCount)
 	p.temp.presignRound7Messages = make([]tss.ParsedMessage, partyCount)
 	// temp data init
-	p.temp.m = msg
 	p.temp.c1Is = make([]*big.Int, partyCount)
 	p.temp.bigWs = make([]*crypto.ECPoint, partyCount)
 	p.temp.betas = make([]*big.Int, partyCount)
@@ -132,16 +129,6 @@ func NewLocalParty(
 
 	p.temp.LocalPresignData = &LocalPresignData{}
 	return p
-}
-
-// Constructs a new ECDSA signing party for one-round signing. The final SignatureData struct will be a partial struct containing only the data for a final signing round (see the readme).
-func NewLocalPartyWithOneRoundSign(
-	params *tss.Parameters,
-	key keygen.LocalPartySaveData,
-	out chan<- tss.Message,
-	end chan<- *LocalPresignData,
-) tss.Party {
-	return NewLocalParty(nil, params, key, out, end)
 }
 
 func (p *LocalParty) FirstRound() tss.Round {

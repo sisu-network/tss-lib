@@ -47,7 +47,7 @@ func TestE2EConcurrent(t *testing.T) {
 	assert.Equal(t, testThreshold+1, len(keys))
 	assert.Equal(t, testThreshold+1, len(signPIDs))
 
-	// PHASE: signing
+	// PHASE: presign
 	// use a shuffled selection of the list of parties for this test
 	p2pCtx := tss.NewPeerContext(signPIDs)
 	parties := make([]*LocalParty, 0, len(signPIDs))
@@ -63,7 +63,7 @@ func TestE2EConcurrent(t *testing.T) {
 	for i := 0; i < len(signPIDs); i++ {
 		params := tss.NewParameters(p2pCtx, signPIDs[i], len(signPIDs), threshold)
 
-		P := NewLocalParty(msg, params, keys[i], outCh, endCh).(*LocalParty)
+		P := NewLocalParty(params, keys[i], outCh, endCh).(*LocalParty)
 		parties = append(parties, P)
 		go func(P *LocalParty) {
 			if err := P.Start(); err != nil {
@@ -76,14 +76,14 @@ func TestE2EConcurrent(t *testing.T) {
 	presignOutputs := make([]*LocalPresignData, 0)
 	presignOutputsLock := &sync.RWMutex{}
 
-signing:
+presign:
 	for {
 		fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
 		select {
 		case err := <-errCh:
 			common.Logger.Errorf("Error: %s", err)
 			assert.FailNow(t, err.Error())
-			break signing
+			break presign
 
 		case msg := <-outCh:
 			dest := msg.GetTo()
@@ -145,20 +145,15 @@ signing:
 				btcecSig := &btcec.Signature{R: r, S: sumS}
 				btcecSig.Verify(msg.Bytes(), (*btcec.PublicKey)(&pk))
 				assert.True(t, ok, "ecdsa verify 2 must pass")
-
-				t.Log("ECDSA signing test done.")
 				// END ECDSA verify
 
-				break signing
+				break presign
 			}
 		}
 	}
 }
 
-// calculateSi is called in one-round signing mode after the online rounds have finished to compute s_i.
 func calculateSi(data *LocalPresignData, msg *big.Int) (sI *big.Int) {
-	// data := state.GetOneRoundData()
-
 	N := tss.EC().Params().N
 	modN := common.ModInt(N)
 

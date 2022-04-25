@@ -205,10 +205,6 @@ func (round *round7) CanAccept(msg tss.ParsedMessage) bool {
 }
 
 func (round *round7) NextRound() tss.Round {
-	// If we are in one-round signing mode (msg is nil), we will exit out with the current state here and there are no further rounds.
-	if !round.abortingT7 && round.temp.m == nil {
-		return nil
-	}
 	// Continuing the full online protocol.
 	round.started = false
 	return &finalization{round}

@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	TaskName = "signing"
+	TaskName = "presign"
 )
 
 type (
@@ -48,7 +48,6 @@ type (
 		// Trigger for when a consistency check fails during Phase 5 of the protocol, resulting in a Type 5 identifiable abort (GG20)
 		abortingT5 bool
 	}
-	// The final round for the one-round signing mode (see the README)
 	round7 struct {
 		*round6
 
