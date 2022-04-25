@@ -18,8 +18,6 @@ import (
 	"github.com/sisu-network/tss-lib/tss"
 )
 
-// These messages were generated from Protocol Buffers definitions into ecdsa-signing.pb.go
-
 var (
 	// Ensure that signing messages implement ValidateBasic
 	_ = []tss.MessageContent{
@@ -36,7 +34,7 @@ var (
 
 // ----- //
 
-func NewSignRound1Message1(
+func NewPresignRound1Message1(
 	to, from *tss.PartyID,
 	c *big.Int,
 	proof *mta.RangeProofAlice,
@@ -71,7 +69,7 @@ func (m *PresignRound1Message1) UnmarshalRangeProofAlice() (*mta.RangeProofAlice
 
 // ----- //
 
-func NewSignRound1Message2(
+func NewPresignRound1Message2(
 	from *tss.PartyID,
 	commitment cmt.HashCommitment,
 ) tss.ParsedMessage {
@@ -97,7 +95,7 @@ func (m *PresignRound1Message2) UnmarshalCommitment() *big.Int {
 
 // ----- //
 
-func NewSignRound2Message(
+func NewPresignRound2Message(
 	to, from *tss.PartyID,
 	c1JI *big.Int,
 	pi1JI *mta.ProofBob,
@@ -139,7 +137,7 @@ func (m *PresignRound2Message) UnmarshalProofBobWC() (*mta.ProofBobWC, error) {
 
 // ----- //
 
-func NewSignRound3Message(
+func NewPresignRound3Message(
 	from *tss.PartyID,
 	deltaI *big.Int,
 	TI *crypto.ECPoint,
@@ -212,7 +210,7 @@ func (m *PresignRound3Message) UnmarshalTProof() (*zkp.TProof, error) {
 
 // ----- //
 
-func NewSignRound4Message(
+func NewPresignRound4Message(
 	from *tss.PartyID,
 	deCommitment cmt.HashDeCommitment,
 ) tss.ParsedMessage {
@@ -240,7 +238,7 @@ func (m *PresignRound4Message) UnmarshalDeCommitment() []*big.Int {
 
 // ----- //
 
-func NewSignRound5Message(
+func NewPresignRound5Message(
 	from *tss.PartyID,
 	Ri *crypto.ECPoint,
 	pdlwSlackPf *zkp.PDLwSlackProof,
@@ -285,7 +283,7 @@ func (m *PresignRound5Message) UnmarshalPDLwSlackProof() (*zkp.PDLwSlackProof, e
 
 // ----- //
 
-func NewSignRound6MessageSuccess(
+func NewPresignRound6MessageSuccess(
 	from *tss.PartyID,
 	sI *crypto.ECPoint,
 	proof *zkp.STProof,
@@ -310,7 +308,7 @@ func NewSignRound6MessageSuccess(
 	return tss.NewMessage(meta, content, msg)
 }
 
-func NewSignRound6MessageAbort(
+func NewPresignRound6MessageAbort(
 	from *tss.PartyID,
 	data *PresignRound6Message_AbortData,
 
@@ -389,7 +387,7 @@ func (m *PresignRound6Message_SuccessData) UnmarshalSTProof() (*zkp.STProof, err
 
 // ----- //
 
-func NewSignRound7MessageSuccess(
+func NewPresignRound7MessageSuccess(
 	from *tss.PartyID,
 	sI *big.Int,
 ) tss.ParsedMessage {
@@ -404,7 +402,7 @@ func NewSignRound7MessageSuccess(
 	return tss.NewMessage(meta, content, msg)
 }
 
-func NewSignRound7MessageAbort(
+func NewPresignRound7MessageAbort(
 	from *tss.PartyID,
 	data *PresignRound7Message_AbortData,
 ) tss.ParsedMessage {

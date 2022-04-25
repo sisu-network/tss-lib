@@ -23,7 +23,7 @@ func (round *round4) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
-	r4msg := NewSignRound4Message(Pi, round.temp.deCommit)
+	r4msg := NewPresignRound4Message(Pi, round.temp.deCommit)
 	round.temp.presignRound4Messages[i] = r4msg
 	round.out <- r4msg
 	return nil

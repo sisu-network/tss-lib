@@ -109,7 +109,7 @@ func (round *round2) Start() *tss.Error {
 		if j == i {
 			continue
 		}
-		r2msg := NewSignRound2Message(
+		r2msg := NewPresignRound2Message(
 			Pj, round.PartyID(),
 			round.temp.c1JIs[j],
 			round.temp.pI1JIs[j],

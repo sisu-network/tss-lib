@@ -101,7 +101,7 @@ func (round *round6) Start() *tss.Error {
 			round.abortingT5 = true
 			common.Logger.Warnf("round 6: consistency check failed: g != R products, entering Type 5 identified abort")
 
-			r6msg := NewSignRound6MessageAbort(Pi, &round.temp.r5AbortData)
+			r6msg := NewPresignRound6MessageAbort(Pi, &round.temp.r5AbortData)
 			round.temp.presignRound6Messages[i] = r6msg
 			round.out <- r6msg
 			return nil
@@ -137,7 +137,7 @@ func (round *round6) Start() *tss.Error {
 	round.temp.lI.Set(zero)
 	round.temp.TI, round.temp.lI = nil, nil
 
-	r6msg := NewSignRound6MessageSuccess(Pi, bigSI, stPf)
+	r6msg := NewPresignRound6MessageSuccess(Pi, bigSI, stPf)
 	round.temp.presignRound6Messages[i] = r6msg
 	round.out <- r6msg
 	return nil

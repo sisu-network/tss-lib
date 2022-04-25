@@ -164,7 +164,7 @@ func (round *round7) Start() *tss.Error {
 		common.Logger.Warnf("round 7: consistency check failed: y != bigSJ products, entering Type 7 identified abort")
 
 		// If we abort here, one-round mode won't matter now - we will proceed to round "8" anyway.
-		r7msg := NewSignRound7MessageAbort(Pi, &round.temp.r7AbortData)
+		r7msg := NewPresignRound7MessageAbort(Pi, &round.temp.r7AbortData)
 		round.temp.presignRound7Messages[i] = r7msg
 		round.out <- r7msg
 		return nil

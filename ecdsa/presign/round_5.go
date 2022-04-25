@@ -99,7 +99,7 @@ func (round *round5) Start() *tss.Error {
 	}
 	pdlWSlackPf := zkp.NewPDLwSlackProof(pdlWSlackWitness, pdlWSlackStatement)
 
-	r5msg := NewSignRound5Message(Pi, bigRBarI, &pdlWSlackPf)
+	r5msg := NewPresignRound5Message(Pi, bigRBarI, &pdlWSlackPf)
 	round.temp.presignRound5Messages[i] = r5msg
 	round.out <- r5msg
 	return nil

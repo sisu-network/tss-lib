@@ -87,13 +87,13 @@ func (round *round1) Start() *tss.Error {
 		if err != nil {
 			return round.WrapError(fmt.Errorf("failed to init mta: %v", err))
 		}
-		r1msg1 := NewSignRound1Message1(Pj, round.PartyID(), cA, pi)
+		r1msg1 := NewPresignRound1Message1(Pj, round.PartyID(), cA, pi)
 		round.temp.presignRound1Message1s[i] = r1msg1
 		round.temp.c1Is[j] = cA
 		round.out <- r1msg1
 	}
 
-	r1msg2 := NewSignRound1Message2(round.PartyID(), cmt.C)
+	r1msg2 := NewPresignRound1Message2(round.PartyID(), cmt.C)
 	round.temp.presignRound1Message2s[i] = r1msg2
 	round.out <- r1msg2
 	return nil
@@ -140,7 +140,7 @@ func (round *round1) prepare() error {
 	if round.Threshold()+1 > len(ks) {
 		return fmt.Errorf("t+1=%d is not satisfied by the key count of %d", round.Threshold()+1, len(ks))
 	}
-	if wI, bigWs, err := PrepareForSigning(i, len(ks), xi, ks, bigXs); err != nil {
+	if wI, bigWs, err := PrepareForPresigning(i, len(ks), xi, ks, bigXs); err != nil {
 		return err
 	} else {
 		round.temp.wI = wI
