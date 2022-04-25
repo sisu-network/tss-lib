@@ -37,7 +37,7 @@ func (round *round2) Start() *tss.Error {
 		// Bob_mid
 		go func(j int, Pj *tss.PartyID) {
 			defer wg.Done()
-			r1msg := round.temp.signRound1Message1s[j].Content().(*SignRound1Message1)
+			r1msg := round.temp.signRound1Message1s[j].Content().(*PresignRound1Message1)
 			rangeProofAliceJ, err := r1msg.UnmarshalRangeProofAlice()
 			if err != nil {
 				errChs <- round.WrapError(errorspkg.Wrapf(err, "MtA: UnmarshalRangeProofAlice failed"), Pj)
@@ -67,7 +67,7 @@ func (round *round2) Start() *tss.Error {
 		// Bob_mid_wc
 		go func(j int, Pj *tss.PartyID) {
 			defer wg.Done()
-			r1msg := round.temp.signRound1Message1s[j].Content().(*SignRound1Message1)
+			r1msg := round.temp.signRound1Message1s[j].Content().(*PresignRound1Message1)
 			rangeProofAliceJ, err := r1msg.UnmarshalRangeProofAlice()
 			if err != nil {
 				errChs <- round.WrapError(errorspkg.Wrapf(err, "MtA: UnmarshalRangeProofAlice failed"), Pj)
@@ -134,7 +134,7 @@ func (round *round2) Update() (bool, *tss.Error) {
 }
 
 func (round *round2) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*SignRound2Message); ok {
+	if _, ok := msg.Content().(*PresignRound2Message); ok {
 		return !msg.IsBroadcast()
 	}
 	return false

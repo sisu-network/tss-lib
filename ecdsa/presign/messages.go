@@ -23,14 +23,14 @@ import (
 var (
 	// Ensure that signing messages implement ValidateBasic
 	_ = []tss.MessageContent{
-		(*SignRound1Message1)(nil),
-		(*SignRound1Message2)(nil),
-		(*SignRound2Message)(nil),
-		(*SignRound3Message)(nil),
-		(*SignRound4Message)(nil),
-		(*SignRound5Message)(nil),
-		(*SignRound6Message)(nil),
-		(*SignRound7Message)(nil),
+		(*PresignRound1Message1)(nil),
+		(*PresignRound1Message2)(nil),
+		(*PresignRound2Message)(nil),
+		(*PresignRound3Message)(nil),
+		(*PresignRound4Message)(nil),
+		(*PresignRound5Message)(nil),
+		(*PresignRound6Message)(nil),
+		(*PresignRound7Message)(nil),
 	}
 )
 
@@ -47,7 +47,7 @@ func NewSignRound1Message1(
 		IsBroadcast: false,
 	}
 	pfBz := proof.Bytes()
-	content := &SignRound1Message1{
+	content := &PresignRound1Message1{
 		C:               c.Bytes(),
 		RangeProofAlice: pfBz[:],
 	}
@@ -55,17 +55,17 @@ func NewSignRound1Message1(
 	return tss.NewMessage(meta, content, msg)
 }
 
-func (m *SignRound1Message1) ValidateBasic() bool {
+func (m *PresignRound1Message1) ValidateBasic() bool {
 	return m != nil &&
 		common.NonEmptyBytes(m.GetC()) &&
 		common.NonEmptyMultiBytes(m.GetRangeProofAlice(), mta.RangeProofAliceBytesParts)
 }
 
-func (m *SignRound1Message1) UnmarshalC() *big.Int {
+func (m *PresignRound1Message1) UnmarshalC() *big.Int {
 	return new(big.Int).SetBytes(m.GetC())
 }
 
-func (m *SignRound1Message1) UnmarshalRangeProofAlice() (*mta.RangeProofAlice, error) {
+func (m *PresignRound1Message1) UnmarshalRangeProofAlice() (*mta.RangeProofAlice, error) {
 	return mta.RangeProofAliceFromBytes(m.GetRangeProofAlice())
 }
 
@@ -79,19 +79,19 @@ func NewSignRound1Message2(
 		From:        from,
 		IsBroadcast: true,
 	}
-	content := &SignRound1Message2{
+	content := &PresignRound1Message2{
 		Commitment: commitment.Bytes(),
 	}
 	msg := tss.NewMessageWrapper(meta, content)
 	return tss.NewMessage(meta, content, msg)
 }
 
-func (m *SignRound1Message2) ValidateBasic() bool {
+func (m *PresignRound1Message2) ValidateBasic() bool {
 	return m.Commitment != nil &&
 		common.NonEmptyBytes(m.GetCommitment())
 }
 
-func (m *SignRound1Message2) UnmarshalCommitment() *big.Int {
+func (m *PresignRound1Message2) UnmarshalCommitment() *big.Int {
 	return new(big.Int).SetBytes(m.GetCommitment())
 }
 
@@ -111,7 +111,7 @@ func NewSignRound2Message(
 	}
 	pfBob := pi1JI.Bytes()
 	pfBobWC := pi2JI.Bytes()
-	content := &SignRound2Message{
+	content := &PresignRound2Message{
 		C1:         c1JI.Bytes(),
 		C2:         c2JI.Bytes(),
 		ProofBob:   pfBob[:],
@@ -121,7 +121,7 @@ func NewSignRound2Message(
 	return tss.NewMessage(meta, content, msg)
 }
 
-func (m *SignRound2Message) ValidateBasic() bool {
+func (m *PresignRound2Message) ValidateBasic() bool {
 	return m != nil &&
 		common.NonEmptyBytes(m.GetC1()) &&
 		common.NonEmptyBytes(m.GetC2()) &&
@@ -129,11 +129,11 @@ func (m *SignRound2Message) ValidateBasic() bool {
 		common.NonEmptyMultiBytes(m.GetProofBobWc(), mta.ProofBobWCBytesParts)
 }
 
-func (m *SignRound2Message) UnmarshalProofBob() (*mta.ProofBob, error) {
+func (m *PresignRound2Message) UnmarshalProofBob() (*mta.ProofBob, error) {
 	return mta.ProofBobFromBytes(m.GetProofBob())
 }
 
-func (m *SignRound2Message) UnmarshalProofBobWC() (*mta.ProofBobWC, error) {
+func (m *PresignRound2Message) UnmarshalProofBobWC() (*mta.ProofBobWC, error) {
 	return mta.ProofBobWCFromBytes(m.GetProofBobWc())
 }
 
@@ -149,7 +149,7 @@ func NewSignRound3Message(
 		From:        from,
 		IsBroadcast: true,
 	}
-	content := &SignRound3Message{
+	content := &PresignRound3Message{
 		DeltaI: deltaI.Bytes(),
 		TI: &common.ECPoint{
 			X: TI.X().Bytes(),
@@ -166,7 +166,7 @@ func NewSignRound3Message(
 	return tss.NewMessage(meta, content, msg)
 }
 
-func (m *SignRound3Message) ValidateBasic() bool {
+func (m *PresignRound3Message) ValidateBasic() bool {
 	if m == nil ||
 		m.GetTI() == nil ||
 		!m.GetTI().ValidateBasic() ||
@@ -191,14 +191,14 @@ func (m *SignRound3Message) ValidateBasic() bool {
 	return TI.ValidateBasic() && tProof.Verify(TI, basePoint2)
 }
 
-func (m *SignRound3Message) UnmarshalTI() (*crypto.ECPoint, error) {
+func (m *PresignRound3Message) UnmarshalTI() (*crypto.ECPoint, error) {
 	if m.GetTI() == nil || !m.GetTI().ValidateBasic() {
 		return nil, errors.New("UnmarshalTI() X or Y coord is nil or did not validate")
 	}
 	return crypto.NewECPointFromProtobuf(m.GetTI())
 }
 
-func (m *SignRound3Message) UnmarshalTProof() (*zkp.TProof, error) {
+func (m *PresignRound3Message) UnmarshalTProof() (*zkp.TProof, error) {
 	alpha, err := crypto.NewECPointFromProtobuf(m.GetTProofAlpha())
 	if err != nil {
 		return nil, err
@@ -221,19 +221,19 @@ func NewSignRound4Message(
 		IsBroadcast: true,
 	}
 	dcBzs := common.BigIntsToBytes(deCommitment)
-	content := &SignRound4Message{
+	content := &PresignRound4Message{
 		DeCommitment: dcBzs,
 	}
 	msg := tss.NewMessageWrapper(meta, content)
 	return tss.NewMessage(meta, content, msg)
 }
 
-func (m *SignRound4Message) ValidateBasic() bool {
+func (m *PresignRound4Message) ValidateBasic() bool {
 	return m != nil &&
 		common.NonEmptyMultiBytes(m.DeCommitment, 3)
 }
 
-func (m *SignRound4Message) UnmarshalDeCommitment() []*big.Int {
+func (m *PresignRound4Message) UnmarshalDeCommitment() []*big.Int {
 	deComBzs := m.GetDeCommitment()
 	return cmt.NewHashDeCommitmentFromBytes(deComBzs)
 }
@@ -253,7 +253,7 @@ func NewSignRound5Message(
 	if err != nil {
 		return nil
 	}
-	content := &SignRound5Message{
+	content := &PresignRound5Message{
 		RI:             Ri.ToProtobufPoint(),
 		ProofPdlWSlack: pfBzs,
 	}
@@ -261,7 +261,7 @@ func NewSignRound5Message(
 	return tss.NewMessage(meta, content, msg)
 }
 
-func (m *SignRound5Message) ValidateBasic() bool {
+func (m *PresignRound5Message) ValidateBasic() bool {
 	if m == nil ||
 		m.GetRI() == nil ||
 		!m.GetRI().ValidateBasic() ||
@@ -275,11 +275,11 @@ func (m *SignRound5Message) ValidateBasic() bool {
 	return RI.ValidateBasic()
 }
 
-func (m *SignRound5Message) UnmarshalRI() (*crypto.ECPoint, error) {
+func (m *PresignRound5Message) UnmarshalRI() (*crypto.ECPoint, error) {
 	return crypto.NewECPointFromProtobuf(m.GetRI())
 }
 
-func (m *SignRound5Message) UnmarshalPDLwSlackProof() (*zkp.PDLwSlackProof, error) {
+func (m *PresignRound5Message) UnmarshalPDLwSlackProof() (*zkp.PDLwSlackProof, error) {
 	return zkp.UnmarshalPDLwSlackProof(m.GetProofPdlWSlack())
 }
 
@@ -295,7 +295,7 @@ func NewSignRound6MessageSuccess(
 		From:        from,
 		IsBroadcast: true,
 	}
-	content := &SignRound6Message{
+	content := &PresignRound6Message{
 		Content: &SignRound6Message_Success{
 			Success: &SignRound6Message_SuccessData{
 				SI:           sI.ToProtobufPoint(),
@@ -322,14 +322,14 @@ func NewSignRound6MessageAbort(
 	// this hack makes the ValidateBasic pass because the [i] index position for this P is empty in these arrays
 	data.GetAlphaIJ()[from.Index] = []byte{1}
 	data.GetBetaJI()[from.Index] = []byte{1}
-	content := &SignRound6Message{
+	content := &PresignRound6Message{
 		Content: &SignRound6Message_Abort{Abort: data},
 	}
 	msg := tss.NewMessageWrapper(meta, content)
 	return tss.NewMessage(meta, content, msg)
 }
 
-func (m *SignRound6Message) ValidateBasic() bool {
+func (m *PresignRound6Message) ValidateBasic() bool {
 	if m == nil || m.GetContent() == nil {
 		return false
 	}
@@ -397,7 +397,7 @@ func NewSignRound7MessageSuccess(
 		From:        from,
 		IsBroadcast: true,
 	}
-	content := &SignRound7Message{
+	content := &PresignRound7Message{
 		Content: &SignRound7Message_SI{SI: sI.Bytes()},
 	}
 	msg := tss.NewMessageWrapper(meta, content)
@@ -415,14 +415,14 @@ func NewSignRound7MessageAbort(
 	// this hack makes the ValidateBasic pass because the [i] index position for this P is empty in these arrays
 	data.GetMuIJ()[from.Index] = []byte{1}
 	data.GetMuRandIJ()[from.Index] = []byte{1}
-	content := &SignRound7Message{
+	content := &PresignRound7Message{
 		Content: &SignRound7Message_Abort{Abort: data},
 	}
 	msg := tss.NewMessageWrapper(meta, content)
 	return tss.NewMessage(meta, content, msg)
 }
 
-func (m *SignRound7Message) ValidateBasic() bool {
+func (m *PresignRound7Message) ValidateBasic() bool {
 	if m == nil || m.GetContent() == nil {
 		return false
 	}

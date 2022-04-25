@@ -40,9 +40,9 @@ func (round *round5) Start() *tss.Error {
 		if j == i {
 			continue
 		}
-		r1msg2 := round.temp.signRound1Message2s[j].Content().(*SignRound1Message2)
-		r3msg := round.temp.signRound3Messages[j].Content().(*SignRound3Message)
-		r4msg := round.temp.signRound4Messages[j].Content().(*SignRound4Message)
+		r1msg2 := round.temp.signRound1Message2s[j].Content().(*PresignRound1Message2)
+		r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
+		r4msg := round.temp.signRound4Messages[j].Content().(*PresignRound4Message)
 
 		// calculating Big R
 		SCj, SDj := r1msg2.UnmarshalCommitment(), r4msg.UnmarshalDeCommitment()
@@ -119,7 +119,7 @@ func (round *round5) Update() (bool, *tss.Error) {
 }
 
 func (round *round5) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*SignRound5Message); ok {
+	if _, ok := msg.Content().(*PresignRound5Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false

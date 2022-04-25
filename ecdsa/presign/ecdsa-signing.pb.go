@@ -34,7 +34,7 @@ const _ = proto.ProtoPackageIsVersion4
 
 //
 // Represents a P2P message sent to each party during Phase 1 of the GG20 ECDSA TSS signing protocol.
-type SignRound1Message1 struct {
+type PresignRound1Message1 struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -43,8 +43,8 @@ type SignRound1Message1 struct {
 	RangeProofAlice [][]byte `protobuf:"bytes,2,rep,name=range_proof_alice,json=rangeProofAlice,proto3" json:"range_proof_alice,omitempty"`
 }
 
-func (x *SignRound1Message1) Reset() {
-	*x = SignRound1Message1{}
+func (x *PresignRound1Message1) Reset() {
+	*x = PresignRound1Message1{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protob_ecdsa_signing_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -52,13 +52,13 @@ func (x *SignRound1Message1) Reset() {
 	}
 }
 
-func (x *SignRound1Message1) String() string {
+func (x *PresignRound1Message1) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignRound1Message1) ProtoMessage() {}
+func (*PresignRound1Message1) ProtoMessage() {}
 
-func (x *SignRound1Message1) ProtoReflect() protoreflect.Message {
+func (x *PresignRound1Message1) ProtoReflect() protoreflect.Message {
 	mi := &file_protob_ecdsa_signing_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -71,18 +71,18 @@ func (x *SignRound1Message1) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use SignRound1Message1.ProtoReflect.Descriptor instead.
-func (*SignRound1Message1) Descriptor() ([]byte, []int) {
+func (*PresignRound1Message1) Descriptor() ([]byte, []int) {
 	return file_protob_ecdsa_signing_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SignRound1Message1) GetC() []byte {
+func (x *PresignRound1Message1) GetC() []byte {
 	if x != nil {
 		return x.C
 	}
 	return nil
 }
 
-func (x *SignRound1Message1) GetRangeProofAlice() [][]byte {
+func (x *PresignRound1Message1) GetRangeProofAlice() [][]byte {
 	if x != nil {
 		return x.RangeProofAlice
 	}
@@ -91,7 +91,7 @@ func (x *SignRound1Message1) GetRangeProofAlice() [][]byte {
 
 //
 // Represents a BROADCAST message sent to all parties during Phase 1 of the GG20 ECDSA TSS signing protocol.
-type SignRound1Message2 struct {
+type PresignRound1Message2 struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -99,8 +99,8 @@ type SignRound1Message2 struct {
 	Commitment []byte `protobuf:"bytes,1,opt,name=commitment,proto3" json:"commitment,omitempty"`
 }
 
-func (x *SignRound1Message2) Reset() {
-	*x = SignRound1Message2{}
+func (x *PresignRound1Message2) Reset() {
+	*x = PresignRound1Message2{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protob_ecdsa_signing_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -108,13 +108,13 @@ func (x *SignRound1Message2) Reset() {
 	}
 }
 
-func (x *SignRound1Message2) String() string {
+func (x *PresignRound1Message2) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignRound1Message2) ProtoMessage() {}
+func (*PresignRound1Message2) ProtoMessage() {}
 
-func (x *SignRound1Message2) ProtoReflect() protoreflect.Message {
+func (x *PresignRound1Message2) ProtoReflect() protoreflect.Message {
 	mi := &file_protob_ecdsa_signing_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -127,11 +127,11 @@ func (x *SignRound1Message2) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use SignRound1Message2.ProtoReflect.Descriptor instead.
-func (*SignRound1Message2) Descriptor() ([]byte, []int) {
+func (*PresignRound1Message2) Descriptor() ([]byte, []int) {
 	return file_protob_ecdsa_signing_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SignRound1Message2) GetCommitment() []byte {
+func (x *PresignRound1Message2) GetCommitment() []byte {
 	if x != nil {
 		return x.Commitment
 	}
@@ -140,7 +140,7 @@ func (x *SignRound1Message2) GetCommitment() []byte {
 
 //
 // Represents a P2P message sent to each party during Phase 2 of the GG20 ECDSA TSS signing protocol.
-type SignRound2Message struct {
+type PresignRound2Message struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -151,8 +151,8 @@ type SignRound2Message struct {
 	ProofBobWc [][]byte `protobuf:"bytes,4,rep,name=proof_bob_wc,json=proofBobWc,proto3" json:"proof_bob_wc,omitempty"`
 }
 
-func (x *SignRound2Message) Reset() {
-	*x = SignRound2Message{}
+func (x *PresignRound2Message) Reset() {
+	*x = PresignRound2Message{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protob_ecdsa_signing_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -160,13 +160,13 @@ func (x *SignRound2Message) Reset() {
 	}
 }
 
-func (x *SignRound2Message) String() string {
+func (x *PresignRound2Message) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignRound2Message) ProtoMessage() {}
+func (*PresignRound2Message) ProtoMessage() {}
 
-func (x *SignRound2Message) ProtoReflect() protoreflect.Message {
+func (x *PresignRound2Message) ProtoReflect() protoreflect.Message {
 	mi := &file_protob_ecdsa_signing_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -179,32 +179,32 @@ func (x *SignRound2Message) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use SignRound2Message.ProtoReflect.Descriptor instead.
-func (*SignRound2Message) Descriptor() ([]byte, []int) {
+func (*PresignRound2Message) Descriptor() ([]byte, []int) {
 	return file_protob_ecdsa_signing_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *SignRound2Message) GetC1() []byte {
+func (x *PresignRound2Message) GetC1() []byte {
 	if x != nil {
 		return x.C1
 	}
 	return nil
 }
 
-func (x *SignRound2Message) GetC2() []byte {
+func (x *PresignRound2Message) GetC2() []byte {
 	if x != nil {
 		return x.C2
 	}
 	return nil
 }
 
-func (x *SignRound2Message) GetProofBob() [][]byte {
+func (x *PresignRound2Message) GetProofBob() [][]byte {
 	if x != nil {
 		return x.ProofBob
 	}
 	return nil
 }
 
-func (x *SignRound2Message) GetProofBobWc() [][]byte {
+func (x *PresignRound2Message) GetProofBobWc() [][]byte {
 	if x != nil {
 		return x.ProofBobWc
 	}
@@ -213,7 +213,7 @@ func (x *SignRound2Message) GetProofBobWc() [][]byte {
 
 //
 // Represents a BROADCAST message sent to all parties during Phase 3 of the GG20 ECDSA TSS signing protocol.
-type SignRound3Message struct {
+type PresignRound3Message struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -225,8 +225,8 @@ type SignRound3Message struct {
 	TProofU     []byte          `protobuf:"bytes,5,opt,name=t_proof_u,json=tProofU,proto3" json:"t_proof_u,omitempty"`
 }
 
-func (x *SignRound3Message) Reset() {
-	*x = SignRound3Message{}
+func (x *PresignRound3Message) Reset() {
+	*x = PresignRound3Message{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protob_ecdsa_signing_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -234,13 +234,13 @@ func (x *SignRound3Message) Reset() {
 	}
 }
 
-func (x *SignRound3Message) String() string {
+func (x *PresignRound3Message) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignRound3Message) ProtoMessage() {}
+func (*PresignRound3Message) ProtoMessage() {}
 
-func (x *SignRound3Message) ProtoReflect() protoreflect.Message {
+func (x *PresignRound3Message) ProtoReflect() protoreflect.Message {
 	mi := &file_protob_ecdsa_signing_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -253,39 +253,39 @@ func (x *SignRound3Message) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use SignRound3Message.ProtoReflect.Descriptor instead.
-func (*SignRound3Message) Descriptor() ([]byte, []int) {
+func (*PresignRound3Message) Descriptor() ([]byte, []int) {
 	return file_protob_ecdsa_signing_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *SignRound3Message) GetDeltaI() []byte {
+func (x *PresignRound3Message) GetDeltaI() []byte {
 	if x != nil {
 		return x.DeltaI
 	}
 	return nil
 }
 
-func (x *SignRound3Message) GetTI() *common.ECPoint {
+func (x *PresignRound3Message) GetTI() *common.ECPoint {
 	if x != nil {
 		return x.TI
 	}
 	return nil
 }
 
-func (x *SignRound3Message) GetTProofAlpha() *common.ECPoint {
+func (x *PresignRound3Message) GetTProofAlpha() *common.ECPoint {
 	if x != nil {
 		return x.TProofAlpha
 	}
 	return nil
 }
 
-func (x *SignRound3Message) GetTProofT() []byte {
+func (x *PresignRound3Message) GetTProofT() []byte {
 	if x != nil {
 		return x.TProofT
 	}
 	return nil
 }
 
-func (x *SignRound3Message) GetTProofU() []byte {
+func (x *PresignRound3Message) GetTProofU() []byte {
 	if x != nil {
 		return x.TProofU
 	}
@@ -294,7 +294,7 @@ func (x *SignRound3Message) GetTProofU() []byte {
 
 //
 // Represents a BROADCAST message sent to all parties during Phase 4 of the GG20 ECDSA TSS signing protocol.
-type SignRound4Message struct {
+type PresignRound4Message struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -302,8 +302,8 @@ type SignRound4Message struct {
 	DeCommitment [][]byte `protobuf:"bytes,1,rep,name=de_commitment,json=deCommitment,proto3" json:"de_commitment,omitempty"`
 }
 
-func (x *SignRound4Message) Reset() {
-	*x = SignRound4Message{}
+func (x *PresignRound4Message) Reset() {
+	*x = PresignRound4Message{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protob_ecdsa_signing_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -311,13 +311,13 @@ func (x *SignRound4Message) Reset() {
 	}
 }
 
-func (x *SignRound4Message) String() string {
+func (x *PresignRound4Message) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignRound4Message) ProtoMessage() {}
+func (*PresignRound4Message) ProtoMessage() {}
 
-func (x *SignRound4Message) ProtoReflect() protoreflect.Message {
+func (x *PresignRound4Message) ProtoReflect() protoreflect.Message {
 	mi := &file_protob_ecdsa_signing_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -330,11 +330,11 @@ func (x *SignRound4Message) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use SignRound4Message.ProtoReflect.Descriptor instead.
-func (*SignRound4Message) Descriptor() ([]byte, []int) {
+func (*PresignRound4Message) Descriptor() ([]byte, []int) {
 	return file_protob_ecdsa_signing_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *SignRound4Message) GetDeCommitment() [][]byte {
+func (x *PresignRound4Message) GetDeCommitment() [][]byte {
 	if x != nil {
 		return x.DeCommitment
 	}
@@ -343,7 +343,7 @@ func (x *SignRound4Message) GetDeCommitment() [][]byte {
 
 //
 // Represents a BROADCAST message sent to all parties during Phase 5 of the GG20 ECDSA TSS signing protocol.
-type SignRound5Message struct {
+type PresignRound5Message struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -352,8 +352,8 @@ type SignRound5Message struct {
 	ProofPdlWSlack [][]byte        `protobuf:"bytes,2,rep,name=proof_pdl_w_slack,json=proofPdlWSlack,proto3" json:"proof_pdl_w_slack,omitempty"`
 }
 
-func (x *SignRound5Message) Reset() {
-	*x = SignRound5Message{}
+func (x *PresignRound5Message) Reset() {
+	*x = PresignRound5Message{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protob_ecdsa_signing_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -361,13 +361,13 @@ func (x *SignRound5Message) Reset() {
 	}
 }
 
-func (x *SignRound5Message) String() string {
+func (x *PresignRound5Message) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignRound5Message) ProtoMessage() {}
+func (*PresignRound5Message) ProtoMessage() {}
 
-func (x *SignRound5Message) ProtoReflect() protoreflect.Message {
+func (x *PresignRound5Message) ProtoReflect() protoreflect.Message {
 	mi := &file_protob_ecdsa_signing_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -380,18 +380,18 @@ func (x *SignRound5Message) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use SignRound5Message.ProtoReflect.Descriptor instead.
-func (*SignRound5Message) Descriptor() ([]byte, []int) {
+func (*PresignRound5Message) Descriptor() ([]byte, []int) {
 	return file_protob_ecdsa_signing_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *SignRound5Message) GetRI() *common.ECPoint {
+func (x *PresignRound5Message) GetRI() *common.ECPoint {
 	if x != nil {
 		return x.RI
 	}
 	return nil
 }
 
-func (x *SignRound5Message) GetProofPdlWSlack() [][]byte {
+func (x *PresignRound5Message) GetProofPdlWSlack() [][]byte {
 	if x != nil {
 		return x.ProofPdlWSlack
 	}
@@ -400,7 +400,7 @@ func (x *SignRound5Message) GetProofPdlWSlack() [][]byte {
 
 //
 // Represents a BROADCAST message sent to all parties during Phase 6 of the GG20 ECDSA TSS signing protocol.
-type SignRound6Message struct {
+type PresignRound6Message struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -411,8 +411,8 @@ type SignRound6Message struct {
 	Content isSignRound6Message_Content `protobuf_oneof:"content"`
 }
 
-func (x *SignRound6Message) Reset() {
-	*x = SignRound6Message{}
+func (x *PresignRound6Message) Reset() {
+	*x = PresignRound6Message{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protob_ecdsa_signing_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -420,13 +420,13 @@ func (x *SignRound6Message) Reset() {
 	}
 }
 
-func (x *SignRound6Message) String() string {
+func (x *PresignRound6Message) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignRound6Message) ProtoMessage() {}
+func (*PresignRound6Message) ProtoMessage() {}
 
-func (x *SignRound6Message) ProtoReflect() protoreflect.Message {
+func (x *PresignRound6Message) ProtoReflect() protoreflect.Message {
 	mi := &file_protob_ecdsa_signing_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -439,25 +439,25 @@ func (x *SignRound6Message) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use SignRound6Message.ProtoReflect.Descriptor instead.
-func (*SignRound6Message) Descriptor() ([]byte, []int) {
+func (*PresignRound6Message) Descriptor() ([]byte, []int) {
 	return file_protob_ecdsa_signing_proto_rawDescGZIP(), []int{6}
 }
 
-func (m *SignRound6Message) GetContent() isSignRound6Message_Content {
+func (m *PresignRound6Message) GetContent() isSignRound6Message_Content {
 	if m != nil {
 		return m.Content
 	}
 	return nil
 }
 
-func (x *SignRound6Message) GetSuccess() *SignRound6Message_SuccessData {
+func (x *PresignRound6Message) GetSuccess() *SignRound6Message_SuccessData {
 	if x, ok := x.GetContent().(*SignRound6Message_Success); ok {
 		return x.Success
 	}
 	return nil
 }
 
-func (x *SignRound6Message) GetAbort() *SignRound6Message_AbortData {
+func (x *PresignRound6Message) GetAbort() *SignRound6Message_AbortData {
 	if x, ok := x.GetContent().(*SignRound6Message_Abort); ok {
 		return x.Abort
 	}
@@ -482,7 +482,7 @@ func (*SignRound6Message_Abort) isSignRound6Message_Content() {}
 
 //
 // Represents a BROADCAST message sent to all parties during online mode Phase 7 of the GG20 ECDSA TSS signing protocol.
-type SignRound7Message struct {
+type PresignRound7Message struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -493,8 +493,8 @@ type SignRound7Message struct {
 	Content isSignRound7Message_Content `protobuf_oneof:"content"`
 }
 
-func (x *SignRound7Message) Reset() {
-	*x = SignRound7Message{}
+func (x *PresignRound7Message) Reset() {
+	*x = PresignRound7Message{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protob_ecdsa_signing_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -502,13 +502,13 @@ func (x *SignRound7Message) Reset() {
 	}
 }
 
-func (x *SignRound7Message) String() string {
+func (x *PresignRound7Message) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignRound7Message) ProtoMessage() {}
+func (*PresignRound7Message) ProtoMessage() {}
 
-func (x *SignRound7Message) ProtoReflect() protoreflect.Message {
+func (x *PresignRound7Message) ProtoReflect() protoreflect.Message {
 	mi := &file_protob_ecdsa_signing_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -521,25 +521,25 @@ func (x *SignRound7Message) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use SignRound7Message.ProtoReflect.Descriptor instead.
-func (*SignRound7Message) Descriptor() ([]byte, []int) {
+func (*PresignRound7Message) Descriptor() ([]byte, []int) {
 	return file_protob_ecdsa_signing_proto_rawDescGZIP(), []int{7}
 }
 
-func (m *SignRound7Message) GetContent() isSignRound7Message_Content {
+func (m *PresignRound7Message) GetContent() isSignRound7Message_Content {
 	if m != nil {
 		return m.Content
 	}
 	return nil
 }
 
-func (x *SignRound7Message) GetSI() []byte {
+func (x *PresignRound7Message) GetSI() []byte {
 	if x, ok := x.GetContent().(*SignRound7Message_SI); ok {
 		return x.SI
 	}
 	return nil
 }
 
-func (x *SignRound7Message) GetAbort() *SignRound7Message_AbortData {
+func (x *PresignRound7Message) GetAbort() *SignRound7Message_AbortData {
 	if x, ok := x.GetContent().(*SignRound7Message_Abort); ok {
 		return x.Abort
 	}
@@ -919,14 +919,14 @@ func file_protob_ecdsa_signing_proto_rawDescGZIP() []byte {
 
 var file_protob_ecdsa_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_protob_ecdsa_signing_proto_goTypes = []interface{}{
-	(*SignRound1Message1)(nil),            // 0: SignRound1Message1
-	(*SignRound1Message2)(nil),            // 1: SignRound1Message2
-	(*SignRound2Message)(nil),             // 2: SignRound2Message
-	(*SignRound3Message)(nil),             // 3: SignRound3Message
-	(*SignRound4Message)(nil),             // 4: SignRound4Message
-	(*SignRound5Message)(nil),             // 5: SignRound5Message
-	(*SignRound6Message)(nil),             // 6: SignRound6Message
-	(*SignRound7Message)(nil),             // 7: SignRound7Message
+	(*PresignRound1Message1)(nil),            // 0: SignRound1Message1
+	(*PresignRound1Message2)(nil),            // 1: SignRound1Message2
+	(*PresignRound2Message)(nil),             // 2: SignRound2Message
+	(*PresignRound3Message)(nil),             // 3: SignRound3Message
+	(*PresignRound4Message)(nil),             // 4: SignRound4Message
+	(*PresignRound5Message)(nil),             // 5: SignRound5Message
+	(*PresignRound6Message)(nil),             // 6: SignRound6Message
+	(*PresignRound7Message)(nil),             // 7: SignRound7Message
 	(*SignRound6Message_SuccessData)(nil), // 8: SignRound6Message.SuccessData
 	(*SignRound6Message_AbortData)(nil),   // 9: SignRound6Message.AbortData
 	(*SignRound7Message_AbortData)(nil),   // 10: SignRound7Message.AbortData
@@ -958,7 +958,7 @@ func file_protob_ecdsa_signing_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_protob_ecdsa_signing_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignRound1Message1); i {
+			switch v := v.(*PresignRound1Message1); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -970,7 +970,7 @@ func file_protob_ecdsa_signing_proto_init() {
 			}
 		}
 		file_protob_ecdsa_signing_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignRound1Message2); i {
+			switch v := v.(*PresignRound1Message2); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -982,7 +982,7 @@ func file_protob_ecdsa_signing_proto_init() {
 			}
 		}
 		file_protob_ecdsa_signing_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignRound2Message); i {
+			switch v := v.(*PresignRound2Message); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -994,7 +994,7 @@ func file_protob_ecdsa_signing_proto_init() {
 			}
 		}
 		file_protob_ecdsa_signing_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignRound3Message); i {
+			switch v := v.(*PresignRound3Message); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1006,7 +1006,7 @@ func file_protob_ecdsa_signing_proto_init() {
 			}
 		}
 		file_protob_ecdsa_signing_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignRound4Message); i {
+			switch v := v.(*PresignRound4Message); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1018,7 +1018,7 @@ func file_protob_ecdsa_signing_proto_init() {
 			}
 		}
 		file_protob_ecdsa_signing_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignRound5Message); i {
+			switch v := v.(*PresignRound5Message); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1030,7 +1030,7 @@ func file_protob_ecdsa_signing_proto_init() {
 			}
 		}
 		file_protob_ecdsa_signing_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignRound6Message); i {
+			switch v := v.(*PresignRound6Message); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1042,7 +1042,7 @@ func file_protob_ecdsa_signing_proto_init() {
 			}
 		}
 		file_protob_ecdsa_signing_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignRound7Message); i {
+			switch v := v.(*PresignRound7Message); i {
 			case 0:
 				return &v.state
 			case 1:

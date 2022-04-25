@@ -65,7 +65,7 @@ func (round *finalization) Start() *tss.Error {
 				paiPKJ = round.key.PaillierPKs[j]
 			}
 
-			r7msgInner, ok := msg.Content().(*SignRound7Message).GetContent().(*SignRound7Message_Abort)
+			r7msgInner, ok := msg.Content().(*PresignRound7Message).GetContent().(*SignRound7Message_Abort)
 			if !ok {
 				common.Logger.Warnf("round 8: unexpected success message while in aborting mode: %+v", r7msgInner)
 				culprits = append(culprits, Pj)
@@ -91,7 +91,7 @@ func (round *finalization) Start() *tss.Error {
 			cA, err := paiPKJ.EncryptWithChosenRandomness(
 				new(big.Int).SetBytes(r7msg.GetKI()),
 				new(big.Int).SetBytes(r7msg.GetKRandI()))
-			r1msg1 := round.temp.signRound1Message1s[j].Content().(*SignRound1Message1)
+			r1msg1 := round.temp.signRound1Message1s[j].Content().(*PresignRound1Message1)
 			if err != nil || !bytes.Equal(cA.Bytes(), r1msg1.GetC()) {
 				culprits = append(culprits, Pj)
 				continue

@@ -43,8 +43,8 @@ func (round *round7) Start() *tss.Error {
 				continue
 			}
 			Pj := round.Parties().IDs()[j]
-			r3msg := round.temp.signRound3Messages[j].Content().(*SignRound3Message)
-			r6msgInner, ok := msg.Content().(*SignRound6Message).GetContent().(*SignRound6Message_Abort)
+			r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
+			r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*SignRound6Message_Abort)
 			if !ok {
 				common.Logger.Warnf("round 7: unexpected success message while in aborting mode: %+v", r6msgInner)
 				culprits = append(culprits, Pj)
@@ -104,8 +104,8 @@ func (round *round7) Start() *tss.Error {
 	var multiErr error
 	for j, msg := range round.temp.signRound6Messages {
 		Pj := round.Parties().IDs()[j]
-		r3msg := round.temp.signRound3Messages[j].Content().(*SignRound3Message)
-		r6msgInner, ok := msg.Content().(*SignRound6Message).GetContent().(*SignRound6Message_Success)
+		r3msg := round.temp.signRound3Messages[j].Content().(*PresignRound3Message)
+		r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*SignRound6Message_Success)
 		if !ok {
 			culprits = append(culprits, Pj)
 			multiErr = multierror.Append(multiErr, fmt.Errorf("unexpected abort message while in success mode: %+v", r6msgInner))
@@ -198,7 +198,7 @@ func (round *round7) Update() (bool, *tss.Error) {
 
 func (round *round7) CanAccept(msg tss.ParsedMessage) bool {
 	// Collect messages for the full online protocol OR identified abort of type 7.
-	if _, ok := msg.Content().(*SignRound7Message); ok {
+	if _, ok := msg.Content().(*PresignRound7Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false

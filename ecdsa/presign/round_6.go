@@ -43,7 +43,7 @@ func (round *round6) Start() *tss.Error {
 	BigRBarJ := make(map[string]*common.ECPoint, len(round.temp.signRound5Messages))
 	for j, msg := range round.temp.signRound5Messages {
 		Pj := round.Parties().IDs()[j]
-		r5msg := msg.Content().(*SignRound5Message)
+		r5msg := msg.Content().(*PresignRound5Message)
 		bigRBarJ, err := r5msg.UnmarshalRI()
 		if err != nil {
 			errs[Pj] = err
@@ -71,7 +71,7 @@ func (round *round6) Start() *tss.Error {
 			errs[Pj] = err
 			continue
 		}
-		r1msg1 := round.temp.signRound1Message1s[j].Content().(*SignRound1Message1)
+		r1msg1 := round.temp.signRound1Message1s[j].Content().(*PresignRound1Message1)
 		pdlWSlackStatement := zkp.PDLwSlackStatement{
 			PK:         round.key.PaillierPKs[Pj.Index],
 			CipherText: new(big.Int).SetBytes(r1msg1.GetC()),
@@ -157,7 +157,7 @@ func (round *round6) Update() (bool, *tss.Error) {
 }
 
 func (round *round6) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*SignRound6Message); ok {
+	if _, ok := msg.Content().(*PresignRound6Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false

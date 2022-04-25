@@ -43,7 +43,7 @@ func (round *round4) Update() (bool, *tss.Error) {
 }
 
 func (round *round4) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*SignRound4Message); ok {
+	if _, ok := msg.Content().(*PresignRound4Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false
