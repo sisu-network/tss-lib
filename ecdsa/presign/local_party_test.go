@@ -1,3 +1,9 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package presign
 
 import (
@@ -8,41 +14,58 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/ipfs/go-log"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sisu-network/tss-lib/common"
+	"github.com/sisu-network/tss-lib/crypto"
 	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestPresign(t *testing.T) {
-	// log.SetLogLevel("tss-lib", "info")
+const (
+	testParticipants = test.TestParticipants
+	testThreshold    = test.TestThreshold
+)
 
-	n := 20
-	threshold := 10
+func setUp(level string) {
+	if err := log.SetLogLevel("tss-lib", level); err != nil {
+		panic(err)
+	}
+}
+
+func TestE2EConcurrent(t *testing.T) {
+	setUp("info")
+	threshold := testThreshold
 
 	// PHASE: load keygen fixtures
-	keys, signPIDs, err := keygen.LoadKeygenTestFixturesRandomSet(threshold+1, n)
+	keys, signPIDs, err := keygen.LoadKeygenTestFixturesRandomSet(testThreshold+1, testParticipants)
 	assert.NoError(t, err, "should load keygen fixtures")
-	assert.Equal(t, threshold+1, len(keys))
-	assert.Equal(t, threshold+1, len(signPIDs))
+	assert.Equal(t, testThreshold+1, len(keys))
+	assert.Equal(t, testThreshold+1, len(signPIDs))
 
+	fmt.Println("len(signPIDs) = ", len(signPIDs))
+	fmt.Println("len(keys) = ", len(keys))
+
+	// PHASE: presign
+	// use a shuffled selection of the list of parties for this test
 	p2pCtx := tss.NewPeerContext(signPIDs)
 	parties := make([]*LocalParty, 0, len(signPIDs))
 
 	errCh := make(chan *tss.Error, len(signPIDs))
 	outCh := make(chan tss.Message, len(signPIDs))
-	endCh := make(chan LocalPresignData, len(signPIDs))
+	endCh := make(chan *LocalPresignData, len(signPIDs))
 
 	updater := test.SharedPartyUpdater
 
-	msgToSign := []byte("This is a test")
-	msgInt := new(big.Int).SetBytes(msgToSign)
-
+	// init the parties
+	msg := common.GetRandomPrimeInt(256)
 	for i := 0; i < len(signPIDs); i++ {
 		params := tss.NewParameters(p2pCtx, signPIDs[i], len(signPIDs), threshold)
 
-		P := NewLocalParty(signPIDs, params, keys[i], outCh, endCh).(*LocalParty)
+		P := NewLocalParty(params, keys[i], outCh, endCh).(*LocalParty)
 		parties = append(parties, P)
 		go func(P *LocalParty) {
 			if err := P.Start(); err != nil {
@@ -50,16 +73,16 @@ func TestPresign(t *testing.T) {
 			}
 		}(P)
 	}
-	var ended int32
 
-presignature:
+	var ended int32
+presign:
 	for {
 		fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
 		select {
 		case err := <-errCh:
 			common.Logger.Errorf("Error: %s", err)
 			assert.FailNow(t, err.Error())
-			return
+			break presign
 
 		case msg := <-outCh:
 			dest := msg.GetTo()
@@ -77,132 +100,60 @@ presignature:
 				go updater(parties[dest[0].Index], msg, errCh)
 			}
 
-		case <-endCh:
+		case data := <-endCh:
 			atomic.AddInt32(&ended, 1)
+
 			if atomic.LoadInt32(&ended) == int32(len(signPIDs)) {
-				fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
-				fmt.Println("All tasks finished")
-				break presignature
+				t.Logf("Done. Received signature data from %d participants %+v", ended, data)
+
+				// bigR is stored as bytes for the OneRoundData protobuf struct
+				bigRX, bigRY := new(big.Int).SetBytes(parties[0].temp.BigR.GetX()), new(big.Int).SetBytes(parties[0].temp.BigR.GetY())
+				bigR := crypto.NewECPointNoCurveCheck(tss.EC(), bigRX, bigRY)
+
+				r := parties[0].temp.rI.X()
+				fmt.Printf("sign result: R(%s, %s), r=%s\n", bigR.X().String(), bigR.Y().String(), r.String())
+
+				modN := common.ModInt(tss.EC().Params().N)
+
+				// BEGIN check s correctness
+				sumS := big.NewInt(0)
+
+				for _, P := range parties {
+					si := calculateSi(P.temp.LocalPresignData, msg)
+					sumS = modN.Add(sumS, si)
+				}
+
+				fmt.Printf("S: %s\n", sumS.String())
+				// END check s correctness
+
+				// BEGIN ECDSA verify
+				pkX, pkY := keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y()
+				pk := ecdsa.PublicKey{
+					Curve: tss.EC(),
+					X:     pkX,
+					Y:     pkY,
+				}
+				ok := ecdsa.Verify(&pk, msg.Bytes(), bigR.X(), sumS)
+				assert.True(t, ok, "ecdsa verify must pass")
+
+				btcecSig := &btcec.Signature{R: r, S: sumS}
+				btcecSig.Verify(msg.Bytes(), (*btcec.PublicKey)(&pk))
+				assert.True(t, ok, "ecdsa verify 2 must pass")
+				// END ECDSA verify
+
+				break presign
 			}
 		}
 	}
 
-	verifyPubKey(t, parties, keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y())
-	verifyTheta(t, parties)
-	verifySigma(t, parties)
-	verifyR(t, parties)
-	verifySignature(t, parties, msgInt, keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y())
-
-	SavePresignData(parties)
+	// SavePresignData(parties)
 }
 
-func verifyPubKey(t *testing.T, parties []*LocalParty, pubX, pubY *big.Int) {
+func calculateSi(data *LocalPresignData, msg *big.Int) (sI *big.Int) {
 	N := tss.EC().Params().N
 	modN := common.ModInt(N)
 
-	w := big.NewInt(0)
-	for _, p := range parties {
-		w = modN.Add(w, p.temp.w)
-	}
-
-	px, py := tss.EC().ScalarBaseMult(w.Bytes())
-	assert.Equal(t, px, pubX)
-	assert.Equal(t, py, pubY)
-}
-
-func verifyTheta(t *testing.T, parties []*LocalParty) {
-	// Verify theta = sum(theta_i) * sum(k_i)
-
-	N := tss.EC().Params().N
-	modN := common.ModInt(N)
-
-	theta := big.NewInt(0)
-	sumK := big.NewInt(0)
-	sumGamma := big.NewInt(0)
-
-	for _, p := range parties {
-		theta = modN.Add(theta, p.temp.theta)
-		sumK = modN.Add(sumK, p.temp.k)
-		sumGamma = modN.Add(sumGamma, p.temp.gamma)
-	}
-
-	mul := modN.Mul(sumK, sumGamma)
-
-	assert.Equal(t, theta, mul)
-}
-
-func verifySigma(t *testing.T, parties []*LocalParty) {
-	N := tss.EC().Params().N
-	modN := common.ModInt(N)
-
-	sigma := big.NewInt(0)
-	sumK := big.NewInt(0)
-	sumW := big.NewInt(0)
-
-	for _, p := range parties {
-		sigma = modN.Add(sigma, p.temp.sigma)
-		sumK = modN.Add(sumK, p.temp.k)
-		sumW = modN.Add(sumW, p.temp.w)
-	}
-
-	mul := modN.Mul(sumK, sumW)
-
-	assert.Equal(t, sigma, mul)
-}
-
-func verifyR(t *testing.T, parties []*LocalParty) {
-	N := tss.EC().Params().N
-	modN := common.ModInt(N)
-
-	// Verify that all R are the same
-	for _, p := range parties {
-		if p.temp.rx.Cmp(parties[0].temp.rx) != 0 {
-			assert.FailNow(t, "rx does not match")
-		}
-
-		if p.temp.ry.Cmp(parties[0].temp.ry) != 0 {
-			assert.FailNow(t, "ry does not match")
-		}
-	}
-
-	// Verify R = g * k
-	k := big.NewInt(0)
-	for _, p := range parties {
-		k = modN.Add(k, p.temp.k)
-	}
-	k = modN.ModInverse(k)
-
-	gkx, gky := tss.EC().ScalarBaseMult(k.Bytes())
-	assert.Equal(t, gkx, parties[0].temp.bigR.X())
-	assert.Equal(t, gky, parties[0].temp.bigR.Y())
-}
-
-func verifySignature(t *testing.T, parties []*LocalParty, msgInt, pkX, pkY *big.Int) {
-	R := parties[0].temp.bigR
-	r := parties[0].temp.rx
-	fmt.Printf("sign result: R(%s, %s), r=%s\n", R.X().String(), R.Y().String(), r.String())
-
-	modN := common.ModInt(tss.EC().Params().N)
-
-	// BEGIN check s correctness
-	sumS := big.NewInt(0)
-	for _, p := range parties {
-		si := modN.Mul(msgInt, p.temp.k)
-		si = modN.Add(si, p.temp.rSigma)
-
-		sumS = modN.Add(sumS, si)
-	}
-	fmt.Printf("S: %s\n", sumS.String())
-	// END check s correctness
-
-	// BEGIN ECDSA verify
-	pk := ecdsa.PublicKey{
-		Curve: tss.EC(),
-		X:     pkX,
-		Y:     pkY,
-	}
-	ok := ecdsa.Verify(&pk, msgInt.Bytes(), R.X(), sumS)
-	assert.True(t, ok, "ecdsa verify must pass")
-	t.Log("ECDSA signing test done.")
-	// END ECDSA verify
+	kI, rSigmaI := new(big.Int).SetBytes(data.KI), new(big.Int).SetBytes(data.RSigmaI)
+	sI = modN.Add(modN.Mul(msg, kI), rSigmaI)
+	return
 }

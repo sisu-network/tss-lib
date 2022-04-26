@@ -1,12 +1,21 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package presign
 
 import (
 	"errors"
+	"math/big"
 
 	errors2 "github.com/pkg/errors"
+
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
 	"github.com/sisu-network/tss-lib/crypto/commitments"
+	"github.com/sisu-network/tss-lib/crypto/zkp"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -18,13 +27,24 @@ func (round *round5) Start() *tss.Error {
 	round.started = true
 	round.resetOK()
 
-	R := round.temp.pointGamma
+	Pi := round.PartyID()
+	i := Pi.Index
+
+	modN := common.ModInt(tss.EC().Params().N)
+
+	bigR := round.temp.gammaIG
+	deltaI := *round.temp.deltaI
+	deltaSum := &deltaI
+
 	for j, Pj := range round.Parties().IDs() {
-		if j == round.PartyID().Index {
+		if j == i {
 			continue
 		}
 		r1msg2 := round.temp.presignRound1Message2s[j].Content().(*PresignRound1Message2)
+		r3msg := round.temp.presignRound3Messages[j].Content().(*PresignRound3Message)
 		r4msg := round.temp.presignRound4Messages[j].Content().(*PresignRound4Message)
+
+		// calculating Big R
 		SCj, SDj := r1msg2.UnmarshalCommitment(), r4msg.UnmarshalDeCommitment()
 		cmtDeCmt := commitments.HashCommitDecommit{C: SCj, D: SDj}
 		ok, bigGammaJ := cmtDeCmt.DeCommit()
@@ -35,55 +55,77 @@ func (round *round5) Start() *tss.Error {
 		if err != nil {
 			return round.WrapError(errors2.Wrapf(err, "NewECPoint(bigGammaJ)"), Pj)
 		}
-		proof, err := r4msg.UnmarshalZKProof()
+		round.temp.bigGammaJs[j] = bigGammaJPoint // used for identifying abort in round 7
+		bigR, err = bigR.Add(bigGammaJPoint)
 		if err != nil {
-			return round.WrapError(errors.New("failed to unmarshal bigGamma proof"), Pj)
+			return round.WrapError(errors2.Wrapf(err, "bigR.Add(bigGammaJ)"), Pj)
 		}
-		ok = proof.Verify(bigGammaJPoint)
-		if !ok {
-			return round.WrapError(errors.New("failed to prove bigGamma"), Pj)
-		}
-		R, err = R.Add(bigGammaJPoint)
-		if err != nil {
-			return round.WrapError(errors2.Wrapf(err, "R.Add(bigGammaJ)"), Pj)
-		}
+
+		// calculating delta^-1 (below)
+		deltaJ := r3msg.GetDeltaI()
+		deltaSum = modN.Add(deltaSum, new(big.Int).SetBytes(deltaJ))
 	}
 
-	R = R.ScalarMult(round.temp.thetaInverse)
-	N := tss.EC().Params().N
-	modN := common.ModInt(N)
-	rx := R.X()
-	ry := R.Y()
-	rSigma := modN.Mul(rx, round.temp.sigma)
+	// compute the multiplicative inverse delta mod q
+	deltaInv := modN.Inverse(deltaSum)
 
-	round.temp.rx = rx
-	round.temp.ry = ry
-	round.temp.bigR = R
-	round.temp.rSigma = rSigma
+	// compute R and Rdash_i
+	bigR = bigR.ScalarMult(deltaInv)
+	round.temp.BigR = bigR.ToProtobufPoint()
+	r := bigR.X()
 
-	round.data.PartyIds = round.temp.partyIds
-	round.data.ECDSAPub = round.key.ECDSAPub
-	round.data.W = round.temp.w
-	round.data.K = round.temp.k
-	round.data.Rx = rx
-	round.data.Ry = ry
-	round.data.RSigma = rSigma
+	// used in FinalizeGetOurSigShare
+	round.temp.RSigmaI = modN.Mul(r, round.temp.sigmaI).Bytes()
 
-	round.end <- *round.data
+	// all parties broadcast Rdash_i = k_i * R
+	kI := new(big.Int).SetBytes(round.temp.KI)
+	bigRBarI := bigR.ScalarMult(kI)
 
+	// compute ZK proof of consistency between R_i and E_i(k_i)
+	// ported from: https://git.io/Jf69a
+	pdlWSlackStatement := zkp.PDLwSlackStatement{
+		PK:         &round.key.PaillierSK.PublicKey,
+		CipherText: round.temp.cAKI,
+		Q:          bigRBarI,
+		G:          bigR,
+		H1:         round.key.H1i,
+		H2:         round.key.H2i,
+		NTilde:     round.key.NTildei,
+	}
+	pdlWSlackWitness := zkp.PDLwSlackWitness{
+		SK: round.key.PaillierSK,
+		X:  kI,
+		R:  round.temp.rAKI,
+	}
+	pdlWSlackPf := zkp.NewPDLwSlackProof(pdlWSlackWitness, pdlWSlackStatement)
+
+	r5msg := NewPresignRound5Message(Pi, bigRBarI, &pdlWSlackPf)
+	round.temp.presignRound5Messages[i] = r5msg
+	round.out <- r5msg
 	return nil
 }
 
 func (round *round5) Update() (bool, *tss.Error) {
-	// TODO: Add 2 more rounds for Phase 5, 6 to do ZK proof for R & Si.
-	return false, nil
+	for j, msg := range round.temp.presignRound5Messages {
+		if round.ok[j] {
+			continue
+		}
+		if msg == nil || !round.CanAccept(msg) {
+			return false, nil
+		}
+		round.ok[j] = true
+	}
+	return true, nil
 }
 
 func (round *round5) CanAccept(msg tss.ParsedMessage) bool {
-	// TODO: Add 2 more rounds for Phase 5, 6 to do ZK proof for R & Si.
+	if _, ok := msg.Content().(*PresignRound5Message); ok {
+		return msg.IsBroadcast()
+	}
 	return false
 }
 
 func (round *round5) NextRound() tss.Round {
-	return nil
+	round.started = false
+	return &round6{round, false}
 }

@@ -1,3 +1,9 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package presign
 
 import (
@@ -12,16 +18,15 @@ const (
 type (
 	base struct {
 		*tss.Parameters
-		key     *keygen.LocalPartySaveData
-		data    *LocalPresignData
+		key *keygen.LocalPartySaveData
+		// data    *LocalPresignData
 		temp    *localTempData
 		out     chan<- tss.Message
-		end     chan<- LocalPresignData
+		end     chan<- *LocalPresignData
 		ok      []bool // `ok` tracks parties which have been verified by Update()
 		started bool
 		number  int
 	}
-
 	round1 struct {
 		*base
 	}
@@ -37,7 +42,35 @@ type (
 	round5 struct {
 		*round4
 	}
+	round6 struct {
+		*round5
+
+		// Trigger for when a consistency check fails during Phase 5 of the protocol, resulting in a Type 5 identifiable abort (GG20)
+		abortingT5 bool
+	}
+	round7 struct {
+		*round6
+
+		// Trigger for when a consistency check fails during Phase 6 of the protocol, resulting in a Type 7 identifiable abort (GG20)
+		abortingT7 bool
+	}
+	finalization struct {
+		*round7
+	}
 )
+
+var (
+	_ tss.Round = (*round1)(nil)
+	_ tss.Round = (*round2)(nil)
+	_ tss.Round = (*round3)(nil)
+	_ tss.Round = (*round4)(nil)
+	_ tss.Round = (*round5)(nil)
+	_ tss.Round = (*round6)(nil)
+	_ tss.Round = (*round7)(nil)
+	_ tss.Round = (*finalization)(nil)
+)
+
+// ----- //
 
 func (round *base) Params() *tss.Parameters {
 	return round.Parameters

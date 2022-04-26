@@ -1,10 +1,3 @@
-// Copyright © Sisu network contributors
-//
-// This file is a derived work from Binance's tss-lib. Please refer to the
-// LICENSE copyright file at the root directory for usage of the source code.
-//
-// Original license:
-//
 // Copyright © 2019 Binance
 //
 // This file is part of Binance. The full Binance copyright notice, including
@@ -24,6 +17,31 @@ import (
 	"github.com/sisu-network/tss-lib/tss"
 )
 
+func TestCheckIndexesDup(t *testing.T) {
+	indexes := make([]*big.Int, 0)
+	for i := 0; i < 1000; i++ {
+		indexes = append(indexes, common.GetRandomPositiveInt(tss.EC().Params().N))
+	}
+	_, e := CheckIndexes(tss.EC(), indexes)
+	assert.NoError(t, e)
+
+	indexes = append(indexes, indexes[99])
+	_, e = CheckIndexes(tss.EC(), indexes)
+	assert.Error(t, e)
+}
+
+func TestCheckIndexesZero(t *testing.T) {
+	indexes := make([]*big.Int, 0)
+	for i := 0; i < 1000; i++ {
+		indexes = append(indexes, common.GetRandomPositiveInt(tss.EC().Params().N))
+	}
+	_, e := CheckIndexes(tss.EC(), indexes)
+	assert.NoError(t, e)
+
+	indexes = append(indexes, tss.EC().Params().N)
+	_, e = CheckIndexes(tss.EC(), indexes)
+	assert.Error(t, e)
+}
 func TestCreate(t *testing.T) {
 	num, threshold := 5, 3
 

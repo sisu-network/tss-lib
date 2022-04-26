@@ -1,3 +1,9 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package presign
 
 import (
@@ -18,9 +24,9 @@ var (
 )
 
 // round 1 represents round 1 of the signing part of the GG18 ECDSA TSS spec (Gennaro, Goldfeder; 2018)
-func newRound1(params *tss.Parameters, key *keygen.LocalPartySaveData, data *LocalPresignData, temp *localTempData, out chan<- tss.Message, end chan<- LocalPresignData) tss.Round {
+func newRound1(params *tss.Parameters, key *keygen.LocalPartySaveData, temp *localTempData, out chan<- tss.Message, end chan<- *LocalPresignData) tss.Round {
 	return &round1{
-		&base{params, key, data, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
+		&base{params, key, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
 }
 
 func (round *round1) Start() *tss.Error {
@@ -32,36 +38,55 @@ func (round *round1) Start() *tss.Error {
 	round.started = true
 	round.resetOK()
 
-	k := common.GetRandomPositiveInt(tss.EC().Params().N)
-	gamma := common.GetRandomPositiveInt(tss.EC().Params().N)
+	Pi := round.PartyID()
+	i := Pi.Index
+	round.ok[i] = true
 
-	pointGamma := crypto.ScalarBaseMult(tss.EC(), gamma)
-	cmt := commitments.NewHashCommitment(pointGamma.X(), pointGamma.Y())
-	round.temp.k = k
-	round.temp.gamma = gamma
-	round.temp.pointGamma = pointGamma
+	gammaI := common.GetRandomPositiveInt(tss.EC().Params().N)
+	kI := common.GetRandomPositiveInt(tss.EC().Params().N)
+	round.temp.gammaI = gammaI
+	round.temp.r5AbortData.GammaI = gammaI.Bytes()
+
+	gammaIG := crypto.ScalarBaseMult(tss.EC(), gammaI)
+	round.temp.gammaIG = gammaIG
+
+	cmt := commitments.NewHashCommitment(gammaIG.X(), gammaIG.Y())
 	round.temp.deCommit = cmt.D
 
-	i := round.PartyID().Index
-	round.ok[i] = true
+	// MtA round 1
+	paiPK := round.key.PaillierPKs[i]
+	cA, rA, err := paiPK.EncryptAndReturnRandomness(kI)
+	if err != nil {
+		return round.WrapError(err, Pi)
+	}
+
+	{
+		kIBz := kI.Bytes()
+		round.temp.KI = kIBz // now part of the OneRoundData struct
+		round.temp.r5AbortData.KI = kIBz
+		round.temp.r7AbortData.KI = kIBz
+		round.temp.cAKI = cA // used for the ZK proof in round 5
+		round.temp.rAKI = rA
+		round.temp.r7AbortData.KRandI = rA.Bytes()
+	}
 
 	for j, Pj := range round.Parties().IDs() {
 		if j == i {
 			continue
 		}
-		cA, pi, err := mta.AliceInit(round.key.PaillierPKs[i], k, round.key.NTildej[j], round.key.H1j[j], round.key.H2j[j])
+		pi, err := mta.AliceInit(paiPK, kI, cA, rA, round.key.NTildej[j], round.key.H1j[j], round.key.H2j[j])
 		if err != nil {
 			return round.WrapError(fmt.Errorf("failed to init mta: %v", err))
 		}
-		r1msg1 := NewSignRound1Message1(Pj, round.PartyID(), cA, pi)
-		round.temp.cis[j] = cA
+		r1msg1 := NewPresignRound1Message1(Pj, round.PartyID(), cA, pi)
+		round.temp.presignRound1Message1s[i] = r1msg1
+		round.temp.c1Is[j] = cA
 		round.out <- r1msg1
 	}
 
-	r1msg2 := NewSignRound1Message2(round.PartyID(), cmt.C)
+	r1msg2 := NewPresignRound1Message2(round.PartyID(), cmt.C)
 	round.temp.presignRound1Message2s[i] = r1msg2
 	round.out <- r1msg2
-
 	return nil
 }
 
@@ -102,17 +127,15 @@ func (round *round1) NextRound() tss.Round {
 // helper to call into PrepareForSigning()
 func (round *round1) prepare() error {
 	i := round.PartyID().Index
-
-	xi := round.key.Xi
-	ks := round.key.Ks
-	bigXs := round.key.BigXj
-
+	xi, ks, bigXs := round.key.Xi, round.key.Ks, round.key.BigXj
 	if round.Threshold()+1 > len(ks) {
 		return fmt.Errorf("t+1=%d is not satisfied by the key count of %d", round.Threshold()+1, len(ks))
 	}
-	wi, bigWs := PrepareForPresigning(i, len(ks), xi, ks, bigXs)
-
-	round.temp.w = wi
-	round.temp.bigWs = bigWs
+	if wI, bigWs, err := PrepareForPresigning(i, len(ks), xi, ks, bigXs); err != nil {
+		return err
+	} else {
+		round.temp.wI = wI
+		round.temp.bigWs = bigWs
+	}
 	return nil
 }

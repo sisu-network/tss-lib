@@ -1,3 +1,9 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package signing
 
 import (
@@ -14,17 +20,13 @@ type (
 	base struct {
 		*tss.Parameters
 		presignData *presign.LocalPresignData
-		sigData     *common.SignatureData
-
-		temp *localTempData
-		out  chan<- tss.Message
-		end  chan<- common.SignatureData
-
-		ok      []bool // `ok` tracks parties which have been verified by Update()
-		started bool
-		number  int
+		temp        *localTempData
+		out         chan<- tss.Message
+		end         chan<- *common.ECSignature
+		ok          []bool // `ok` tracks parties which have been verified by Update()
+		started     bool
+		number      int
 	}
-
 	round1 struct {
 		*base
 	}
@@ -36,7 +38,10 @@ type (
 
 var (
 	_ tss.Round = (*round1)(nil)
+	_ tss.Round = (*finalization)(nil)
 )
+
+// ----- //
 
 func (round *base) Params() *tss.Parameters {
 	return round.Parameters

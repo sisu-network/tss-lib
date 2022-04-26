@@ -1,31 +1,46 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package signing
 
 import (
 	"math/big"
 
+	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
-// Protobuf gen command: protoc --proto_path=protob --go_out=ecdsa/signing --go_opt=paths=source_relative ecdsa-signing.proto
+// These messages were generated from Protocol Buffers definitions into ecdsa-signing.pb.go
 
-func NewSignRound1Message(from *tss.PartyID, si *big.Int) tss.ParsedMessage {
+var (
+	// Ensure that signing messages implement ValidateBasic
+	_ = []tss.MessageContent{
+		(*SignRound1Message)(nil),
+	}
+)
+
+// ----- //
+
+func NewSignRound1Message(from *tss.PartyID, sI *big.Int) tss.ParsedMessage {
 	meta := tss.MessageRouting{
 		From:        from,
+		To:          nil,
 		IsBroadcast: true,
 	}
-
 	content := &SignRound1Message{
-		Si: si.Bytes(),
+		Si: sI.Bytes(),
 	}
-
 	msg := tss.NewMessageWrapper(meta, content)
 	return tss.NewMessage(meta, content, msg)
 }
 
 func (m *SignRound1Message) ValidateBasic() bool {
-	return m.Si != nil
-}
+	if m == nil || m.Si == nil {
+		return false
+	}
 
-func (m *SignRound1Message) UnmarshalS() *big.Int {
-	return new(big.Int).SetBytes(m.Si)
+	return common.NonEmptyBytes(m.Si)
 }

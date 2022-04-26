@@ -1,17 +1,37 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package signing
 
 import (
 	"errors"
 	"math/big"
 
-	"github.com/sisu-network/tss-lib/common"
+	common "github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
-func newRound1(params *tss.Parameters, presignData *presign.LocalPresignData, sigData *common.SignatureData, temp *localTempData, out chan<- tss.Message, end chan<- common.SignatureData) tss.Round {
+var (
+	zero = big.NewInt(0)
+)
+
+// round 1 represents round 1 of the signing part of the GG18 ECDSA TSS spec (Gennaro, Goldfeder; 2018)
+func newRound1(params *tss.Parameters, presignData *presign.LocalPresignData, temp *localTempData, out chan<- tss.Message, end chan<- *common.ECSignature) tss.Round {
 	return &round1{
-		&base{params, presignData, sigData, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
+		&base{params, presignData, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
+}
+
+func calculateSi(data *presign.LocalPresignData, msg *big.Int) (sI *big.Int) {
+	N := tss.EC().Params().N
+	modN := common.ModInt(N)
+
+	kI, rSigmaI := new(big.Int).SetBytes(data.KI), new(big.Int).SetBytes(data.RSigmaI)
+	sI = modN.Add(modN.Mul(msg, kI), rSigmaI)
+	return
 }
 
 func (round *round1) Start() *tss.Error {
@@ -23,7 +43,8 @@ func (round *round1) Start() *tss.Error {
 	// but considered different blockchain use different hash function we accept the converted big.Int
 	// if this big.Int is not belongs to Zq, the client might not comply with common rule (for ECDSA):
 	// https://github.com/btcsuite/btcd/blob/c26ffa870fd817666a857af1bf6498fabba1ffe3/btcec/signature.go#L263
-	if round.temp.m.Cmp(tss.EC().Params().N) >= 0 {
+	if round.temp.m != nil &&
+		round.temp.m.Cmp(tss.EC().Params().N) >= 0 {
 		return round.WrapError(errors.New("hashed message is not valid"))
 	}
 
@@ -31,30 +52,28 @@ func (round *round1) Start() *tss.Error {
 	round.started = true
 	round.resetOK()
 
-	si := new(big.Int).Mul(round.temp.m, round.presignData.K)
-	si.Add(si, round.presignData.RSigma)
-	si.Mod(si, tss.EC().Params().N)
+	Pi := round.PartyID()
+	i := Pi.Index
+	round.ok[i] = true
 
-	round.temp.si = si
+	round.temp.sI = calculateSi(round.presignData, round.temp.m)
 
-	r1msg := NewSignRound1Message(round.PartyID(), si)
-	round.temp.signRound1Messages[round.PartyID().Index] = r1msg
-	round.out <- r1msg
+	round.out <- NewSignRound1Message(round.PartyID(), calculateSi(round.presignData, round.temp.m))
 
 	return nil
 }
 
 func (round *round1) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.signRound1Messages {
+	for j, msg1 := range round.temp.signRound1Message {
 		if round.ok[j] {
 			continue
 		}
-		if msg == nil || !round.CanAccept(msg) {
+		if msg1 == nil || !round.CanAccept(msg1) {
 			return false, nil
 		}
-		// vss check is in round 2
 		round.ok[j] = true
 	}
+
 	return true, nil
 }
 
@@ -62,10 +81,17 @@ func (round *round1) CanAccept(msg tss.ParsedMessage) bool {
 	if _, ok := msg.Content().(*SignRound1Message); ok {
 		return msg.IsBroadcast()
 	}
+
 	return false
 }
 
 func (round *round1) NextRound() tss.Round {
 	round.started = false
 	return &finalization{round}
+}
+
+// ----- //
+
+func (round *round1) prepare() error {
+	return nil
 }

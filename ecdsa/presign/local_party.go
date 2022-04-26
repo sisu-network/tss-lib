@@ -1,3 +1,9 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package presign
 
 import (
@@ -5,10 +11,9 @@ import (
 	"fmt"
 	"math/big"
 
-	cmt "github.com/sisu-network/tss-lib/crypto/commitments"
-
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
+	cmt "github.com/sisu-network/tss-lib/crypto/commitments"
 	"github.com/sisu-network/tss-lib/crypto/mta"
 	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
@@ -26,11 +31,10 @@ type (
 
 		keys keygen.LocalPartySaveData
 		temp localTempData
-		data LocalPresignData
 
 		// outbound messaging
 		out chan<- tss.Message
-		end chan<- LocalPresignData
+		end chan<- *LocalPresignData
 	}
 
 	localMessageStore struct {
@@ -39,49 +43,58 @@ type (
 		presignRound2Messages,
 		presignRound3Messages,
 		presignRound4Messages,
-		presignRound5Messages []tss.ParsedMessage
+		presignRound5Messages,
+		presignRound6Messages,
+		presignRound7Messages []tss.ParsedMessage
 	}
 
 	localTempData struct {
 		localMessageStore
 
-		partyIds tss.SortedPartyIDs
-
 		// temp data (thrown away after sign) / round 1
-		w,
-		k,
-		theta,
-		thetaInverse,
-		sigma,
-		gamma *big.Int
-		cis        []*big.Int
-		bigWs      []*crypto.ECPoint
-		pointGamma *crypto.ECPoint
-		deCommit   cmt.HashDeCommitment
+		wI,
+		cAKI,
+		rAKI,
+		deltaI,
+		sigmaI,
+		gammaI *big.Int
+		c1Is     []*big.Int
+		bigWs    []*crypto.ECPoint
+		gammaIG  *crypto.ECPoint
+		deCommit cmt.HashDeCommitment
 
 		// round 2
 		betas, // return value of Bob_mid
-		c1jis,
-		c2jis,
-		vs []*big.Int // return value of Bob_mid_wc
-		pi1jis []*mta.ProofBob
-		pi2jis []*mta.ProofBobWC
+		c1JIs,
+		c2JIs,
+		vJIs []*big.Int // return value of Bob_mid_wc
+		pI1JIs []*mta.ProofBob
+		pI2JIs []*mta.ProofBobWC
+
+		// round 3
+		lI *big.Int
 
 		// round 5
-		rx,
-		ry,
-		rSigma *big.Int
+		bigGammaJs  []*crypto.ECPoint
+		r5AbortData PresignRound6Message_AbortData
 
-		bigR *crypto.ECPoint
+		// round 6
+		*LocalPresignData
+
+		// round 7
+		sI *big.Int
+		rI,
+		TI *crypto.ECPoint
+		r7AbortData PresignRound7Message_AbortData
 	}
 )
 
+// Constructs a new ECDSA presign party.
 func NewLocalParty(
-	partyIds tss.SortedPartyIDs,
 	params *tss.Parameters,
 	key keygen.LocalPartySaveData,
 	out chan<- tss.Message,
-	end chan<- LocalPresignData,
+	end chan<- *LocalPresignData,
 ) tss.Party {
 	partyCount := len(params.Parties().IDs())
 	p := &LocalParty{
@@ -89,7 +102,6 @@ func NewLocalParty(
 		params:    params,
 		keys:      keygen.BuildLocalSaveDataSubset(key, params.Parties().IDs()),
 		temp:      localTempData{},
-		data:      LocalPresignData{},
 		out:       out,
 		end:       end,
 	}
@@ -99,22 +111,28 @@ func NewLocalParty(
 	p.temp.presignRound2Messages = make([]tss.ParsedMessage, partyCount)
 	p.temp.presignRound3Messages = make([]tss.ParsedMessage, partyCount)
 	p.temp.presignRound4Messages = make([]tss.ParsedMessage, partyCount)
-
+	p.temp.presignRound5Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound6Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.presignRound7Messages = make([]tss.ParsedMessage, partyCount)
 	// temp data init
-	p.temp.partyIds = partyIds
-	p.temp.cis = make([]*big.Int, partyCount)
+	p.temp.c1Is = make([]*big.Int, partyCount)
 	p.temp.bigWs = make([]*crypto.ECPoint, partyCount)
 	p.temp.betas = make([]*big.Int, partyCount)
-	p.temp.c1jis = make([]*big.Int, partyCount)
-	p.temp.c2jis = make([]*big.Int, partyCount)
-	p.temp.pi1jis = make([]*mta.ProofBob, partyCount)
-	p.temp.pi2jis = make([]*mta.ProofBobWC, partyCount)
-	p.temp.vs = make([]*big.Int, partyCount)
+	p.temp.c1JIs = make([]*big.Int, partyCount)
+	p.temp.c2JIs = make([]*big.Int, partyCount)
+	p.temp.pI1JIs = make([]*mta.ProofBob, partyCount)
+	p.temp.pI2JIs = make([]*mta.ProofBobWC, partyCount)
+	p.temp.vJIs = make([]*big.Int, partyCount)
+	p.temp.bigGammaJs = make([]*crypto.ECPoint, partyCount)
+	p.temp.r5AbortData.AlphaIJ = make([][]byte, partyCount)
+	p.temp.r5AbortData.BetaJI = make([][]byte, partyCount)
+
+	p.temp.LocalPresignData = &LocalPresignData{}
 	return p
 }
 
 func (p *LocalParty) FirstRound() tss.Round {
-	return newRound1(p.params, &p.keys, &p.data, &p.temp, p.out, p.end)
+	return newRound1(p.params, &p.keys, &p.temp, p.out, p.end)
 }
 
 func (p *LocalParty) Start() *tss.Error {
@@ -174,9 +192,14 @@ func (p *LocalParty) StoreMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
 		p.temp.presignRound3Messages[fromPIdx] = msg
 	case *PresignRound4Message:
 		p.temp.presignRound4Messages[fromPIdx] = msg
-
+	case *PresignRound5Message:
+		p.temp.presignRound5Messages[fromPIdx] = msg
+	case *PresignRound6Message:
+		p.temp.presignRound6Messages[fromPIdx] = msg
+	case *PresignRound7Message:
+		p.temp.presignRound7Messages[fromPIdx] = msg
 	default: // unrecognised message, just ignore!
-		common.Logger.Warningf("unrecognised message ignored: %v", msg)
+		common.Logger.Warnf("unrecognised message ignored: %v", msg)
 		return false, nil
 	}
 	return true, nil

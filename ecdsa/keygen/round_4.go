@@ -1,10 +1,3 @@
-// Copyright © Sisu network contributors
-//
-// This file is a derived work from Binance's tss-lib. Please refer to the
-// LICENSE copyright file at the root directory for usage of the source code.
-//
-// Original license:
-//
 // Copyright © 2019 Binance
 //
 // This file is part of Binance. The full Binance copyright notice, including
@@ -70,7 +63,7 @@ func (round *round4) Start() *tss.Error {
 	for j, ok := range round.ok {
 		if !ok {
 			culprits = append(culprits, Ps[j])
-			common.Logger.Warningf("paillier verify failed for party %s", Ps[j])
+			common.Logger.Warnf("paillier verify failed for party %s", Ps[j])
 			continue
 		}
 		common.Logger.Debugf("paillier verify passed for party %s", Ps[j])

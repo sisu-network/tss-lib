@@ -1,6 +1,13 @@
+// Copyright © 2019 Binance
+//
+// This file is part of Binance. The full Binance copyright notice, including
+// terms governing use, modification, and redistribution, is contained in the
+// file LICENSE at the root of the source code distribution tree.
+
 package signing
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -9,6 +16,8 @@ import (
 	"github.com/sisu-network/tss-lib/tss"
 )
 
+// Implements Party
+// Implements Stringer
 var _ tss.Party = (*LocalParty)(nil)
 var _ fmt.Stringer = (*LocalParty)(nil)
 
@@ -17,77 +26,66 @@ type (
 		*tss.BaseParty
 		params *tss.Parameters
 
-		presignData *presign.LocalPresignData
-		sigData     *common.SignatureData
+		presignData presign.LocalPresignData
 		temp        localTempData
 
 		// outbound messaging
 		out chan<- tss.Message
-		end chan<- common.SignatureData
+		end chan<- *common.ECSignature
 	}
 
 	localMessageStore struct {
-		signRound1Messages []tss.ParsedMessage
+		signRound1Message []tss.ParsedMessage
 	}
 
 	localTempData struct {
 		localMessageStore
 
-		m, pubX, pubY, si *big.Int
+		// temp data (thrown away after sign) / round 1
+		m,
+		sI *big.Int
 	}
 )
 
+// Constructs a new ECDSA signing party. Note: msg may be left nil for one-round signing mode to only do the pre-processing steps.
 func NewLocalParty(
 	msg *big.Int,
 	params *tss.Parameters,
-	presignData *presign.LocalPresignData,
-
+	presignData presign.LocalPresignData,
 	out chan<- tss.Message,
-	end chan<- common.SignatureData,
+	end chan<- *common.ECSignature,
 ) tss.Party {
+	partyCount := len(params.Parties().IDs())
 	p := &LocalParty{
 		BaseParty:   new(tss.BaseParty),
 		params:      params,
-		temp:        localTempData{},
 		presignData: presignData,
-		sigData:     &common.SignatureData{},
+		temp:        localTempData{},
 		out:         out,
 		end:         end,
 	}
-	partyCount := len(params.Parties().IDs())
-
-	p.temp.signRound1Messages = make([]tss.ParsedMessage, partyCount)
-
+	// msgs init
+	p.temp.signRound1Message = make([]tss.ParsedMessage, partyCount)
+	// temp data init
 	p.temp.m = msg
-	p.temp.pubX = presignData.ECDSAPub.X()
-	p.temp.pubY = presignData.ECDSAPub.Y()
-
 	return p
 }
 
 func (p *LocalParty) FirstRound() tss.Round {
-	return newRound1(p.params, p.presignData, p.sigData, &p.temp, p.out, p.end)
+	return newRound1(p.params, &p.presignData, &p.temp, p.out, p.end)
 }
 
-func (p *LocalParty) PartyID() *tss.PartyID {
-	return p.params.PartyID()
-}
-
-func (p *LocalParty) StoreMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
-	if ok, err := p.ValidateMessage(msg); !ok || err != nil {
-		return ok, err
-	}
-	fromPIdx := msg.GetFrom().Index
-
-	switch msg.Content().(type) {
-	case *SignRound1Message:
-		p.temp.signRound1Messages[fromPIdx] = msg
-	default: // unrecognised message, just ignore!
-		common.Logger.Warningf("unrecognised message ignored: %v", msg)
-		return false, nil
-	}
-
-	return true, nil
+func (p *LocalParty) Start() *tss.Error {
+	return tss.BaseStart(p, TaskName, func(round tss.Round) *tss.Error {
+		round1, ok := round.(*round1)
+		if !ok {
+			return round.WrapError(errors.New("unable to Start(). party is in an unexpected round"))
+		}
+		if err := round1.prepare(); err != nil {
+			return round.WrapError(err)
+		}
+		return nil
+	})
 }
 
 func (p *LocalParty) Update(msg tss.ParsedMessage) (ok bool, err *tss.Error) {
@@ -102,20 +100,39 @@ func (p *LocalParty) UpdateFromBytes(wireBytes []byte, from *tss.PartyID, isBroa
 	return p.Update(msg)
 }
 
-func (p *LocalParty) Start() *tss.Error {
-	return tss.BaseStart(p, TaskName)
-}
-
 func (p *LocalParty) ValidateMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
 	if ok, err := p.BaseParty.ValidateMessage(msg); !ok || err != nil {
 		return ok, err
 	}
 	// check that the message's "from index" will fit into the array
-	if maxFromIdx := p.params.PartyCount() - 1; maxFromIdx < msg.GetFrom().Index {
+	if maxFromIdx := len(p.params.Parties().IDs()) - 1; maxFromIdx < msg.GetFrom().Index {
 		return false, p.WrapError(fmt.Errorf("received msg with a sender index too great (%d <= %d)",
-			p.params.PartyCount(), msg.GetFrom().Index), msg.GetFrom())
+			maxFromIdx, msg.GetFrom().Index), msg.GetFrom())
 	}
 	return true, nil
+}
+
+func (p *LocalParty) StoreMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
+	// ValidateBasic is cheap; double-check the message here in case the public StoreMessage was called externally
+	if ok, err := p.ValidateMessage(msg); !ok || err != nil {
+		return ok, err
+	}
+	fromPIdx := msg.GetFrom().Index
+
+	// switch/case is necessary to store any messages beyond current round
+	// this does not handle message replays. we expect the caller to apply replay and spoofing protection.
+	switch msg.Content().(type) {
+	case *SignRound1Message:
+		p.temp.signRound1Message[fromPIdx] = msg
+	default: // unrecognised message, just ignore!
+		common.Logger.Warnf("unrecognised message ignored: %v", msg)
+		return false, nil
+	}
+	return true, nil
+}
+
+func (p *LocalParty) PartyID() *tss.PartyID {
+	return p.params.PartyID()
 }
 
 func (p *LocalParty) String() string {
