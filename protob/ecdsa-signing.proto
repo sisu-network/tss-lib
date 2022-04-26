@@ -9,7 +9,7 @@ syntax = "proto3";
 option go_package = "github.com/sisu-network/tss-lib/ecdsa/signing";
 
 /*
- * Represents a P2P message sent to each party during Phase 1 of the GG20 ECDSA TSS signing protocol.
+ * Represents a P2P message sent to each party during Phase 8 of the GG20 ECDSA TSS signing protocol.
  */
 message SignRound1Message {
     bytes si = 1;
