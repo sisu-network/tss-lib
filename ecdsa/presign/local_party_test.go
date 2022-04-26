@@ -46,6 +46,9 @@ func TestE2EConcurrent(t *testing.T) {
 	assert.Equal(t, testThreshold+1, len(keys))
 	assert.Equal(t, testThreshold+1, len(signPIDs))
 
+	fmt.Println("len(signPIDs) = ", len(signPIDs))
+	fmt.Println("len(keys) = ", len(keys))
+
 	// PHASE: presign
 	// use a shuffled selection of the list of parties for this test
 	p2pCtx := tss.NewPeerContext(signPIDs)
@@ -142,8 +145,6 @@ presign:
 			}
 		}
 	}
-
-	fmt.Println("len(parties) = ", len(parties))
 
 	SavePresignData(parties)
 }

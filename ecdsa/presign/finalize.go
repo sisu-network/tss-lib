@@ -154,6 +154,9 @@ func (round *finalization) Start() *tss.Error {
 	}
 
 	// We have successfully generated local presgin data.
+	round.temp.LocalPresignData.PartyId = round.PartyID().Id
+	round.temp.LocalPresignData.ECDSAPub = round.key.ECDSAPub
+
 	round.end <- round.temp.LocalPresignData
 
 	return nil

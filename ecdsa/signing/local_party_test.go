@@ -41,7 +41,7 @@ func TestE2EConcurrent(t *testing.T) {
 	threshold := testThreshold
 
 	// PHASE: load keygen fixtures
-	presigns, signPIDs, err := presign.LoadPresignTestFixture(testThreshold+1, testParticipants)
+	presigns, signPIDs, err := presign.LoadPresignTestFixture(testThreshold + 1)
 	assert.NoError(t, err, "should load keygen fixtures")
 	assert.Equal(t, testThreshold+1, len(presigns))
 	assert.Equal(t, testThreshold+1, len(signPIDs))
@@ -53,7 +53,7 @@ func TestE2EConcurrent(t *testing.T) {
 
 	errCh := make(chan *tss.Error, len(signPIDs))
 	outCh := make(chan tss.Message, len(signPIDs))
-	endCh := make(chan *SignatureData, len(signPIDs))
+	endCh := make(chan *common.ECSignature, len(signPIDs))
 
 	updater := test.SharedPartyUpdater
 

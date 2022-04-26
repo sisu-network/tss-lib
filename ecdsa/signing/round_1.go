@@ -10,6 +10,7 @@ import (
 	"errors"
 	"math/big"
 
+	common "github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
 )
@@ -19,9 +20,18 @@ var (
 )
 
 // round 1 represents round 1 of the signing part of the GG18 ECDSA TSS spec (Gennaro, Goldfeder; 2018)
-func newRound1(params *tss.Parameters, presignData *presign.LocalPresignData, data *SignatureData, temp *localTempData, out chan<- tss.Message, end chan<- *SignatureData) tss.Round {
+func newRound1(params *tss.Parameters, presignData *presign.LocalPresignData, temp *localTempData, out chan<- tss.Message, end chan<- *common.ECSignature) tss.Round {
 	return &round1{
-		&base{params, presignData, data, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
+		&base{params, presignData, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
+}
+
+func calculateSi(data *presign.LocalPresignData, msg *big.Int) (sI *big.Int) {
+	N := tss.EC().Params().N
+	modN := common.ModInt(N)
+
+	kI, rSigmaI := new(big.Int).SetBytes(data.KI), new(big.Int).SetBytes(data.RSigmaI)
+	sI = modN.Add(modN.Mul(msg, kI), rSigmaI)
+	return
 }
 
 func (round *round1) Start() *tss.Error {
@@ -46,7 +56,9 @@ func (round *round1) Start() *tss.Error {
 	i := Pi.Index
 	round.ok[i] = true
 
-	// TODO: Broadcast our local presign data here.
+	round.temp.sI = calculateSi(round.presignData, round.temp.m)
+
+	round.out <- NewSignRound1Message(round.PartyID(), calculateSi(round.presignData, round.temp.m))
 
 	return nil
 }
@@ -61,12 +73,13 @@ func (round *round1) Update() (bool, *tss.Error) {
 		}
 		round.ok[j] = true
 	}
+
 	return true, nil
 }
 
 func (round *round1) CanAccept(msg tss.ParsedMessage) bool {
 	if _, ok := msg.Content().(*SignRound1Message); ok {
-		return !msg.IsBroadcast()
+		return msg.IsBroadcast()
 	}
 
 	return false

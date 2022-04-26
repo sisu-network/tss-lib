@@ -9,8 +9,9 @@ import (
 
 type (
 	LocalPresignData struct {
-		T int32
+		PartyId string
 
+		T int32
 		// Components to produce s = sum(s_i)
 		KI      []byte
 		RSigmaI []byte

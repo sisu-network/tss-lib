@@ -17,6 +17,7 @@ import (
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
+	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -24,37 +25,20 @@ const (
 	TaskNameFinalize = "signing-finalize"
 )
 
-// -----
-// One Round Finalization (async/offline)
-// -----
-
-// FinalizeGetOurSigShare is called in one-round signing mode after the online rounds have finished to compute s_i.
-func FinalizeGetOurSigShare(state *SignatureData, msg *big.Int) (sI *big.Int) {
-	data := state.GetOneRoundData()
-
-	N := tss.EC().Params().N
-	modN := common.ModInt(N)
-
-	kI, rSigmaI := new(big.Int).SetBytes(data.GetKI()), new(big.Int).SetBytes(data.GetRSigmaI())
-	sI = modN.Add(modN.Mul(msg, kI), rSigmaI)
-	return
-}
-
 // FinalizeGetOurSigShare is called in one-round signing mode to build a final signature given others' s_i shares and a msg.
 // Note: each P in otherPs should correspond with that P's s_i at the same index in otherSIs.
 func FinalizeGetAndVerifyFinalSig(
-	state *SignatureData,
+	presignData presign.LocalPresignData,
 	pk *ecdsa.PublicKey,
 	msg *big.Int,
 	ourP *tss.PartyID,
 	ourSI *big.Int,
 	otherSIs map[*tss.PartyID]*big.Int,
-) (*SignatureData, *btcec.Signature, *tss.Error) {
+) (*common.ECSignature, *btcec.Signature, *tss.Error) {
 	if len(otherSIs) == 0 {
 		return nil, nil, FinalizeWrapError(errors.New("len(otherSIs) == 0"), ourP)
 	}
-	data := state.GetOneRoundData()
-	if data.GetT() != int32(len(otherSIs)) {
+	if presignData.T != int32(len(otherSIs)) {
 		return nil, nil, FinalizeWrapError(errors.New("len(otherSIs) != T"), ourP)
 	}
 
@@ -62,17 +46,19 @@ func FinalizeGetAndVerifyFinalSig(
 	modN := common.ModInt(N)
 
 	bigR, err := crypto.NewECPoint(tss.EC(),
-		new(big.Int).SetBytes(data.GetBigR().GetX()),
-		new(big.Int).SetBytes(data.GetBigR().GetY()))
+		new(big.Int).SetBytes(presignData.BigR.GetX()),
+		new(big.Int).SetBytes(presignData.BigR.GetY()))
 	if err != nil {
 		return nil, nil, FinalizeWrapError(err, ourP)
 	}
 
 	r, s := bigR.X(), ourSI
 	culprits := make([]*tss.PartyID, 0, len(otherSIs))
+
 	for Pj, sJ := range otherSIs {
-		bigRBarJBz := data.GetBigRBarJ()[Pj.Id]
-		bigSJBz := data.GetBigSJ()[Pj.Id]
+		bigRBarJBz := presignData.BigRBarJ[Pj.Id]
+		bigSJBz := presignData.BigSJ[Pj.Id]
+
 		if Pj == nil || bigRBarJBz == nil || bigSJBz == nil {
 			return nil, nil, FinalizeWrapError(errors.New("in loop: Pj or map value s_i is nil"), Pj)
 		}
@@ -140,27 +126,18 @@ func FinalizeGetAndVerifyFinalSig(
 	signature.Signature = append(r.Bytes(), s.Bytes()...)
 	signature.SignatureRecovery = []byte{byte(recId)}
 	signature.M = msg.Bytes()
-	state.Signature = signature
 
 	btcecSig := &btcec.Signature{R: r, S: s}
 	if ok = btcecSig.Verify(msg.Bytes(), (*btcec.PublicKey)(pk)); !ok {
 		return nil, nil, FinalizeWrapError(fmt.Errorf("signature verification 2 failed"), ourP)
 	}
 
-	// SECURITY: to be safe the oneRoundData is no longer needed here and reuse of `r` can compromise the key
-	state.OneRoundData = nil
-
-	return state, btcecSig, nil
+	return signature, btcecSig, nil
 }
 
 func FinalizeWrapError(err error, victim *tss.PartyID, culprits ...*tss.PartyID) *tss.Error {
 	return tss.NewError(err, TaskNameFinalize, 8, victim, culprits...)
 }
-
-// -----
-// Full Online Finalization &
-// Identify Aborts of "Type 7"
-// ------
 
 func (round *finalization) Start() *tss.Error {
 	if round.started {
@@ -204,12 +181,12 @@ func (round *finalization) Start() *tss.Error {
 		X:     round.presignData.ECDSAPub.X(),
 		Y:     round.presignData.ECDSAPub.Y(),
 	}
-	data, _, err := FinalizeGetAndVerifyFinalSig(round.data, pk, round.temp.m, round.PartyID(), ourSI, otherSIs)
+	signature, _, err := FinalizeGetAndVerifyFinalSig(*round.presignData, pk, round.temp.m, round.PartyID(), ourSI, otherSIs)
 	if err != nil {
 		return err
 	}
-	round.data = data
-	round.end <- round.data
+
+	round.end <- signature
 	return nil
 }
 

@@ -28,11 +28,10 @@ type (
 
 		presignData presign.LocalPresignData
 		temp        localTempData
-		data        SignatureData
 
 		// outbound messaging
 		out chan<- tss.Message
-		end chan<- *SignatureData
+		end chan<- *common.ECSignature
 	}
 
 	localMessageStore struct {
@@ -54,7 +53,7 @@ func NewLocalParty(
 	params *tss.Parameters,
 	presignData presign.LocalPresignData,
 	out chan<- tss.Message,
-	end chan<- *SignatureData,
+	end chan<- *common.ECSignature,
 ) tss.Party {
 	partyCount := len(params.Parties().IDs())
 	p := &LocalParty{
@@ -62,7 +61,6 @@ func NewLocalParty(
 		params:      params,
 		presignData: presignData,
 		temp:        localTempData{},
-		data:        SignatureData{},
 		out:         out,
 		end:         end,
 	}
@@ -74,7 +72,7 @@ func NewLocalParty(
 }
 
 func (p *LocalParty) FirstRound() tss.Round {
-	return newRound1(p.params, &p.presignData, &p.data, &p.temp, p.out, p.end)
+	return newRound1(p.params, &p.presignData, &p.temp, p.out, p.end)
 }
 
 func (p *LocalParty) Start() *tss.Error {

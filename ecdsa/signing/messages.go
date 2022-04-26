@@ -24,15 +24,11 @@ var (
 
 // ----- //
 
-func NewSignRound1Message(
-	to, from *tss.PartyID,
-	sI *big.Int,
-
-) tss.ParsedMessage {
+func NewSignRound1Message(from *tss.PartyID, sI *big.Int) tss.ParsedMessage {
 	meta := tss.MessageRouting{
 		From:        from,
-		To:          []*tss.PartyID{to},
-		IsBroadcast: false,
+		To:          nil,
+		IsBroadcast: true,
 	}
 	content := &SignRound1Message{
 		Si: sI.Bytes(),

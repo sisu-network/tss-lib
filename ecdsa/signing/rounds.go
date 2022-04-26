@@ -7,6 +7,7 @@
 package signing
 
 import (
+	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/ecdsa/presign"
 	"github.com/sisu-network/tss-lib/tss"
 )
@@ -19,10 +20,9 @@ type (
 	base struct {
 		*tss.Parameters
 		presignData *presign.LocalPresignData
-		data        *SignatureData
 		temp        *localTempData
 		out         chan<- tss.Message
-		end         chan<- *SignatureData
+		end         chan<- *common.ECSignature
 		ok          []bool // `ok` tracks parties which have been verified by Update()
 		started     bool
 		number      int
