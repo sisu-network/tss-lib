@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"math/big"
 	"runtime"
-	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -73,9 +72,6 @@ func TestE2EConcurrent(t *testing.T) {
 	}
 
 	var ended int32
-	presignOutputs := make([]*LocalPresignData, 0)
-	presignOutputsLock := &sync.RWMutex{}
-
 presign:
 	for {
 		fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
@@ -103,9 +99,6 @@ presign:
 
 		case data := <-endCh:
 			atomic.AddInt32(&ended, 1)
-			presignOutputsLock.Lock()
-			presignOutputs = append(presignOutputs, data)
-			presignOutputsLock.Unlock()
 
 			if atomic.LoadInt32(&ended) == int32(len(signPIDs)) {
 				t.Logf("Done. Received signature data from %d participants %+v", ended, data)
@@ -122,12 +115,10 @@ presign:
 				// BEGIN check s correctness
 				sumS := big.NewInt(0)
 
-				presignOutputsLock.RLock()
-				for _, output := range presignOutputs {
-					si := calculateSi(output, msg)
+				for _, P := range parties {
+					si := calculateSi(P.temp.LocalPresignData, msg)
 					sumS = modN.Add(sumS, si)
 				}
-				presignOutputsLock.RUnlock()
 
 				fmt.Printf("S: %s\n", sumS.String())
 				// END check s correctness
@@ -151,6 +142,10 @@ presign:
 			}
 		}
 	}
+
+	fmt.Println("len(parties) = ", len(parties))
+
+	SavePresignData(parties)
 }
 
 func calculateSi(data *LocalPresignData, msg *big.Int) (sI *big.Int) {

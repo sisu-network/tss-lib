@@ -1,6 +1,8 @@
 package presign
 
 import (
+	"encoding/json"
+
 	common "github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
 )
@@ -20,3 +22,7 @@ type (
 		ECDSAPub *crypto.ECPoint // y
 	}
 )
+
+func (d *LocalPresignData) Marshall() ([]byte, error) {
+	return json.Marshal(d)
+}
