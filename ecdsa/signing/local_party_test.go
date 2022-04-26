@@ -102,12 +102,11 @@ signing:
 			if atomic.LoadInt32(&ended) == int32(len(signPIDs)) {
 				t.Logf("Done. Received signature data from %d participants %+v", ended, data)
 
-				// bigR is stored as bytes for the OneRoundData protobuf struct
-				bigRX, bigRY := new(big.Int).SetBytes(parties[0].temp.BigR.GetX()), new(big.Int).SetBytes(parties[0].temp.BigR.GetY())
+				// // bigR is stored as bytes for the OneRoundData protobuf struct
+				bigRX, bigRY := new(big.Int).SetBytes(presigns[0].BigR.GetX()), new(big.Int).SetBytes(presigns[0].BigR.GetY())
 				bigR := crypto.NewECPointNoCurveCheck(tss.EC(), bigRX, bigRY)
 
-				r := parties[0].temp.rI.X()
-				fmt.Printf("sign result: R(%s, %s), r=%s\n", bigR.X().String(), bigR.Y().String(), r.String())
+				fmt.Printf("sign result: R(%s, %s)\n", bigR.X().String(), bigR.Y().String())
 
 				modN := common.ModInt(tss.EC().Params().N)
 
@@ -129,7 +128,7 @@ signing:
 				ok := ecdsa.Verify(&pk, msg.Bytes(), bigR.X(), sumS)
 				assert.True(t, ok, "ecdsa verify must pass")
 
-				btcecSig := &btcec.Signature{R: r, S: sumS}
+				btcecSig := &btcec.Signature{R: bigR.X(), S: sumS}
 				btcecSig.Verify(msg.Bytes(), (*btcec.PublicKey)(&pk))
 				assert.True(t, ok, "ecdsa verify 2 must pass")
 

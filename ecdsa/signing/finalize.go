@@ -174,23 +174,25 @@ func (round *finalization) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
-	culprits := make([]*tss.PartyID, 0, len(round.temp.signRound6Messages))
+	culprits := make([]*tss.PartyID, 0, len(round.temp.signRound1Message))
 
 	ourSI := round.temp.sI
 	otherSIs := make(map[*tss.PartyID]*big.Int, len(Ps)-1)
 	var multiErr error
-	for j, msg := range round.temp.signRound7Messages {
+	for j, msg := range round.temp.signRound1Message {
 		if j == i {
 			continue
 		}
 		Pj := round.Parties().IDs()[j]
-		r7msgInner, ok := msg.Content().(*SignRound7Message).GetContent().(*SignRound7Message_SI)
-		if !ok {
+
+		r1msg := msg.Content().(*SignRound1Message)
+
+		if !msg.ValidateBasic() {
 			culprits = append(culprits, Pj)
-			multiErr = multierror.Append(multiErr, fmt.Errorf("round 8: unexpected abort message while in success mode: %+v", r7msgInner))
+			multiErr = multierror.Append(multiErr, fmt.Errorf("round 8: unexpected abort message while in success mode: %+v", r1msg))
 			continue
 		}
-		sI := r7msgInner.SI
+		sI := r1msg.Si
 		otherSIs[Pj] = new(big.Int).SetBytes(sI)
 	}
 	if 0 < len(culprits) {

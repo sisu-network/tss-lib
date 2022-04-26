@@ -30,21 +30,14 @@ type (
 	round1 struct {
 		*base
 	}
-	// The final round for the one-round signing mode (see the README)
-	round7 struct {
-		*round1
 
-		// Trigger for when a consistency check fails during Phase 6 of the protocol, resulting in a Type 7 identifiable abort (GG20)
-		abortingT7 bool
-	}
 	finalization struct {
-		*round7
+		*round1
 	}
 )
 
 var (
 	_ tss.Round = (*round1)(nil)
-	_ tss.Round = (*round7)(nil)
 	_ tss.Round = (*finalization)(nil)
 )
 
