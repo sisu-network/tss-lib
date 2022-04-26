@@ -146,7 +146,7 @@ presign:
 		}
 	}
 
-	SavePresignData(parties)
+	// SavePresignData(parties)
 }
 
 func calculateSi(data *LocalPresignData, msg *big.Int) (sI *big.Int) {
