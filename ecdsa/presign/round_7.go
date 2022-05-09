@@ -176,9 +176,11 @@ func (round *round7) Start() *tss.Error {
 	round.temp.T = int32(len(round.Parties().IDs()) - 1)
 
 	// Presign has succeeded
-	for j := range round.ok {
-		round.ok[j] = true
-	}
+	r7msg := NewPresignRound7MessageSuccess(round.PartyID())
+	round.temp.presignRound7Messages[i] = r7msg
+
+	round.out <- r7msg
+
 	return nil
 }
 

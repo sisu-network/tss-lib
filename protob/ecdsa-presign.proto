@@ -98,7 +98,7 @@ message PresignRound7Message {
         bytes ecddh_proof_z = 7;
     }
     oneof content {
-        bytes s_i = 1;
+        bool success = 1;
         AbortData abort = 2;
     }
 }

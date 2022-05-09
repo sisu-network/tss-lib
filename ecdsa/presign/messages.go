@@ -389,14 +389,13 @@ func (m *PresignRound6Message_SuccessData) UnmarshalSTProof() (*zkp.STProof, err
 
 func NewPresignRound7MessageSuccess(
 	from *tss.PartyID,
-	sI *big.Int,
 ) tss.ParsedMessage {
 	meta := tss.MessageRouting{
 		From:        from,
 		IsBroadcast: true,
 	}
 	content := &PresignRound7Message{
-		Content: &PresignRound7Message_SI{SI: sI.Bytes()},
+		Content: &PresignRound7Message_Success{Success: true},
 	}
 	msg := tss.NewMessageWrapper(meta, content)
 	return tss.NewMessage(meta, content, msg)
@@ -425,8 +424,8 @@ func (m *PresignRound7Message) ValidateBasic() bool {
 		return false
 	}
 	switch c := m.GetContent().(type) {
-	case *PresignRound7Message_SI:
-		return common.NonEmptyBytes(c.SI)
+	case *PresignRound7Message_Success:
+		return c.Success
 	case *PresignRound7Message_Abort:
 		return c.Abort != nil &&
 			common.NonEmptyBytes(c.Abort.GetKI()) &&

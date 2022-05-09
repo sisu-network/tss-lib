@@ -27,7 +27,7 @@ const (
 )
 
 //
-// Represents a P2P message sent to each party during Phase 1 of the GG20 ECDSA TSS signing protocol.
+// Represents a P2P message sent to each party during Phase 8 of the GG20 ECDSA TSS signing protocol.
 type SignRound1Message struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
