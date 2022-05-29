@@ -3,6 +3,7 @@ module github.com/sisu-network/tss-lib
 go 1.16
 
 require (
+	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/decred/dcrd/dcrec/edwards/v2 v2.0.1
 	github.com/golang/protobuf v1.5.2
@@ -20,3 +21,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )
+
+replace github.com/agl/ed25519 => github.com/binance-chain/edwards25519 v0.0.0-20200305024217-f36fc4b53d43

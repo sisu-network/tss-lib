@@ -7,8 +7,6 @@
 package keygen
 
 import (
-	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -17,13 +15,12 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/decred/dcrd/dcrec/edwards/v2"
 	"github.com/ipfs/go-log"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
-	"github.com/sisu-network/tss-lib/crypto/dlnp"
-	"github.com/sisu-network/tss-lib/crypto/paillier"
 	"github.com/sisu-network/tss-lib/crypto/vss"
 	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
@@ -40,136 +37,10 @@ func setUp(level string) {
 	}
 }
 
-func TestStartRound1Paillier(t *testing.T) {
-	setUp("debug")
-
-	pIDs := tss.GenerateTestPartyIDs(1)
-	p2pCtx := tss.NewPeerContext(pIDs)
-	threshold := 1
-	params := tss.NewParameters(p2pCtx, pIDs[0], len(pIDs), threshold)
-
-	fixtures, pIDs, err := LoadKeygenTestFixtures(testParticipants)
-	if err != nil {
-		common.Logger.Info("No test fixtures were found, so the safe primes will be generated from scratch. This may take a while...")
-		pIDs = tss.GenerateTestPartyIDs(testParticipants)
-	}
-
-	var lp *LocalParty
-	out := make(chan tss.Message, len(pIDs))
-	if 0 < len(fixtures) {
-		lp = NewLocalParty(params, out, nil, fixtures[0].LocalPreParams).(*LocalParty)
-	} else {
-		lp = NewLocalParty(params, out, nil).(*LocalParty)
-	}
-	if err := lp.Start(); err != nil {
-		assert.FailNow(t, err.Error())
-	}
-	<-out
-
-	// Paillier modulus 2048 (two 1024-bit primes)
-	// round up to 256, it was used to be flaky, sometimes comes back with 1 byte less
-	len1 := len(lp.data.PaillierSK.LambdaN.Bytes())
-	len2 := len(lp.data.PaillierSK.PublicKey.N.Bytes())
-	if len1%2 != 0 {
-		len1 = len1 + (256 - (len1 % 256))
-	}
-	if len2%2 != 0 {
-		len2 = len2 + (256 - (len2 % 256))
-	}
-	assert.Equal(t, 2048/8, len1)
-	assert.Equal(t, 2048/8, len2)
-}
-
-func TestFinishAndSaveH1H2(t *testing.T) {
-	setUp("debug")
-
-	pIDs := tss.GenerateTestPartyIDs(1)
-	p2pCtx := tss.NewPeerContext(pIDs)
-	threshold := 1
-	params := tss.NewParameters(p2pCtx, pIDs[0], len(pIDs), threshold)
-
-	fixtures, pIDs, err := LoadKeygenTestFixtures(testParticipants)
-	if err != nil {
-		common.Logger.Info("No test fixtures were found, so the safe primes will be generated from scratch. This may take a while...")
-		pIDs = tss.GenerateTestPartyIDs(testParticipants)
-	}
-
-	var lp *LocalParty
-	out := make(chan tss.Message, len(pIDs))
-	if 0 < len(fixtures) {
-		lp = NewLocalParty(params, out, nil, fixtures[0].LocalPreParams).(*LocalParty)
-	} else {
-		lp = NewLocalParty(params, out, nil).(*LocalParty)
-	}
-	if err := lp.Start(); err != nil {
-		assert.FailNow(t, err.Error())
-	}
-
-	// RSA modulus 2048 (two 1024-bit primes)
-	// round up to 256
-	len1 := len(lp.data.H1j[0].Bytes())
-	len2 := len(lp.data.H2j[0].Bytes())
-	len3 := len(lp.data.NTildej[0].Bytes())
-	if len1%2 != 0 {
-		len1 = len1 + (256 - (len1 % 256))
-	}
-	if len2%2 != 0 {
-		len2 = len2 + (256 - (len2 % 256))
-	}
-	if len3%2 != 0 {
-		len3 = len3 + (256 - (len3 % 256))
-	}
-	// 256 bytes = 2048 bits
-	assert.Equal(t, 256, len1, "h1 should be correct len")
-	assert.Equal(t, 256, len2, "h2 should be correct len")
-	assert.Equal(t, 256, len3, "n-tilde should be correct len")
-	assert.NotZero(t, lp.data.H1i, "h1 should be non-zero")
-	assert.NotZero(t, lp.data.H2i, "h2 should be non-zero")
-	assert.NotZero(t, lp.data.NTildei, "n-tilde should be non-zero")
-}
-
-func TestBadMessageCulprits(t *testing.T) {
-	setUp("debug")
-
-	pIDs := tss.GenerateTestPartyIDs(2)
-	p2pCtx := tss.NewPeerContext(pIDs)
-	params := tss.NewParameters(p2pCtx, pIDs[0], len(pIDs), 1)
-
-	fixtures, pIDs, err := LoadKeygenTestFixtures(testParticipants)
-	if err != nil {
-		common.Logger.Info("No test fixtures were found, so the safe primes will be generated from scratch. This may take a while...")
-		pIDs = tss.GenerateTestPartyIDs(testParticipants)
-	}
-
-	var lp *LocalParty
-	out := make(chan tss.Message, len(pIDs))
-	if 0 < len(fixtures) {
-		lp = NewLocalParty(params, out, nil, fixtures[0].LocalPreParams).(*LocalParty)
-	} else {
-		lp = NewLocalParty(params, out, nil).(*LocalParty)
-	}
-	if err := lp.Start(); err != nil {
-		assert.FailNow(t, err.Error())
-	}
-
-	badMsg, _ := NewKGRound1Message(pIDs[1], zero, &paillier.PublicKey{N: zero}, zero, zero, zero, new(dlnp.Proof), new(dlnp.Proof))
-	ok, err2 := lp.Update(badMsg)
-	t.Log(err2)
-	assert.False(t, ok)
-	if !assert.Error(t, err2) {
-		return
-	}
-	assert.Equal(t, 1, len(err2.Culprits()))
-	assert.Equal(t, pIDs[1], err2.Culprits()[0])
-	assert.Equal(t,
-		"task ecdsa-keygen, party {0,P[1]}, round 1, culprits [{1,2}]: message failed ValidateBasic: Type: KGRound1Message, From: {1,2}, To: all",
-		err2.Error())
-}
-
 func TestE2EConcurrentAndSaveFixtures(t *testing.T) {
 	setUp("info")
 
-	// tss.SetCurve(elliptic.P256())
+	tss.SetCurve(edwards.Edwards())
 
 	threshold := testThreshold
 	fixtures, pIDs, err := LoadKeygenTestFixtures(testParticipants)
@@ -194,7 +65,7 @@ func TestE2EConcurrentAndSaveFixtures(t *testing.T) {
 		var P *LocalParty
 		params := tss.NewParameters(p2pCtx, pIDs[i], len(pIDs), threshold)
 		if i < len(fixtures) {
-			P = NewLocalParty(params, outCh, endCh, fixtures[i].LocalPreParams).(*LocalParty)
+			P = NewLocalParty(params, outCh, endCh).(*LocalParty)
 		} else {
 			P = NewLocalParty(params, outCh, endCh).(*LocalParty)
 		}
@@ -289,20 +160,25 @@ keygen:
 					}
 					u = new(big.Int).Add(u, uj)
 				}
+				u = new(big.Int).Mod(u, tss.EC().Params().N)
+				scalar := make([]byte, 0, 32)
+				copy(scalar, u.Bytes())
 
-				// build ecdsa key pair
-				pkX, pkY := save.ECDSAPub.X(), save.ECDSAPub.Y()
-				pk := ecdsa.PublicKey{
+				// build eddsa key pair
+				pkX, pkY := save.EDDSAPub.X(), save.EDDSAPub.Y()
+				pk := edwards.PublicKey{
 					Curve: tss.EC(),
 					X:     pkX,
 					Y:     pkY,
 				}
-				sk := ecdsa.PrivateKey{
-					PublicKey: pk,
-					D:         u,
+				println("u len: ", len(u.Bytes()))
+				sk, _, err := edwards.PrivKeyFromScalar(u.Bytes())
+				if !assert.NoError(t, err) {
+					return
 				}
+
 				// test pub key, should be on curve and match pkX, pkY
-				assert.True(t, sk.IsOnCurve(pkX, pkY), "public key must be on curve")
+				assert.True(t, pk.IsOnCurve(pkX, pkY), "public key must be on curve")
 
 				// public key tests
 				assert.NotZero(t, u, "u should not be zero")
@@ -311,10 +187,10 @@ keygen:
 				assert.Equal(t, pkY, ourPkY, "pkY should match expected pk derived from u")
 				t.Log("Public key tests done.")
 
-				// make sure everyone has the same ECDSA public key
+				// make sure everyone has the same EDDSA public key
 				for _, Pj := range parties {
-					assert.Equal(t, pkX, Pj.data.ECDSAPub.X())
-					assert.Equal(t, pkY, Pj.data.ECDSAPub.Y())
+					assert.Equal(t, pkX, Pj.data.EDDSAPub.X())
+					assert.Equal(t, pkY, Pj.data.EDDSAPub.Y())
 				}
 				t.Log("Public key distribution test done.")
 
@@ -323,11 +199,11 @@ keygen:
 				for i := range data {
 					data[i] = byte(i)
 				}
-				r, s, err := ecdsa.Sign(rand.Reader, &sk, data)
+				r, s, err := edwards.Sign(sk, data)
 				assert.NoError(t, err, "sign should not throw an error")
-				ok := ecdsa.Verify(&pk, data, r, s)
+				ok := edwards.Verify(&pk, data, r, s)
 				assert.True(t, ok, "signature should be ok")
-				t.Log("ECDSA signing test done.")
+				t.Log("EDDSA signing test done.")
 
 				t.Logf("Start goroutines: %d, End goroutines: %d", startGR, runtime.NumGoroutine())
 
