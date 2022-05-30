@@ -8,6 +8,8 @@ syntax = "proto3";
 
 option go_package = "github.com/sisu-network/tss-lib/ecdsa/signing";
 
+package ecdsa.signing;
+
 /*
  * Represents a P2P message sent to each party during Phase 8 of the GG20 ECDSA TSS signing protocol.
  */

@@ -8,6 +8,8 @@ syntax = "proto3";
 
 option go_package = "github.com/sisu-network/tss-lib/ecdsa/presign";
 
+package ecdsa.presign;
+
 import "protob/shared.proto";
 
 /*
