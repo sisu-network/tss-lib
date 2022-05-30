@@ -7,23 +7,19 @@
 package resharing_test
 
 import (
-	"crypto/ecdsa"
-	"fmt"
 	"math/big"
-	"runtime"
-	"sync"
 	"sync/atomic"
 	"testing"
 
+	"github.com/decred/dcrd/dcrec/edwards/v2"
 	"github.com/ipfs/go-log"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
-	"github.com/sisu-network/tss-lib/ecdsa/keygen"
-	"github.com/sisu-network/tss-lib/ecdsa/presign"
-	. "github.com/sisu-network/tss-lib/ecdsa/resharing"
-	"github.com/sisu-network/tss-lib/ecdsa/signing"
+	"github.com/sisu-network/tss-lib/eddsa/keygen"
+	. "github.com/sisu-network/tss-lib/eddsa/resharing"
+	"github.com/sisu-network/tss-lib/eddsa/signing"
 	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
 )
@@ -42,22 +38,19 @@ func setUp(level string) {
 func TestE2EConcurrent(t *testing.T) {
 	setUp("info")
 
-	// tss.SetCurve(elliptic.P256())
+	tss.SetCurve(edwards.Edwards())
 
 	threshold, newThreshold := testThreshold, testThreshold
 
 	// PHASE: load keygen fixtures
-	firstPartyIdx, extraParties := 0, 1 // extra can be 0 to N-first
+	firstPartyIdx, extraParties := 0, 1 // // extra can be 0 to N-first
 	oldKeys, oldPIDs, err := keygen.LoadKeygenTestFixtures(testThreshold+1+extraParties+firstPartyIdx, firstPartyIdx)
 	assert.NoError(t, err, "should load keygen fixtures")
 
 	// PHASE: resharing
 	oldP2PCtx := tss.NewPeerContext(oldPIDs)
+
 	// init the new parties; re-use the fixture pre-params for speed
-	fixtures, _, err := keygen.LoadKeygenTestFixtures(testParticipants)
-	if err != nil {
-		common.Logger.Info("No test fixtures were found, so the safe primes will be generated from scratch. This may take a while...")
-	}
 	newPIDs := tss.GenerateTestPartyIDs(testParticipants)
 	newP2PCtx := tss.NewPeerContext(newPIDs)
 	newPCount := len(newPIDs)
@@ -78,13 +71,11 @@ func TestE2EConcurrent(t *testing.T) {
 		P := NewLocalParty(params, oldKeys[j], outCh, endCh).(*LocalParty) // discard old key data
 		oldCommittee = append(oldCommittee, P)
 	}
+
 	// init the new parties
-	for j, pID := range newPIDs {
+	for _, pID := range newPIDs {
 		params := tss.NewReSharingParameters(oldP2PCtx, newP2PCtx, pID, testParticipants, threshold, newPCount, newThreshold)
 		save := keygen.NewLocalPartySaveData(newPCount)
-		if j < len(fixtures) && len(newPIDs) <= len(fixtures) {
-			save.LocalPreParams = fixtures[j].LocalPreParams
-		}
 		P := NewLocalParty(params, save, outCh, endCh).(*LocalParty)
 		newCommittee = append(newCommittee, P)
 	}
@@ -110,7 +101,6 @@ func TestE2EConcurrent(t *testing.T) {
 	endedOldCommittee := 0
 	var reSharingEnded int32
 	for {
-		fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
 		select {
 		case err := <-errCh:
 			common.Logger.Errorf("Error: %s", err)
@@ -157,74 +147,6 @@ func TestE2EConcurrent(t *testing.T) {
 				}
 
 				// more verification of signing is implemented within local_party_test.go of keygen package
-				// goto signing
-				goto presign
-			}
-		}
-	}
-
-presign:
-	// PHASE: presigning
-	presignKeys, presignPIDs := newKeys, newPIDs
-	presignP2pCtx := tss.NewPeerContext(presignPIDs)
-	presignParties := make([]*presign.LocalParty, 0, len(presignPIDs))
-
-	presignErrCh := make(chan *tss.Error, len(presignPIDs))
-	presignOutCh := make(chan tss.Message, len(presignPIDs))
-	presignEndCh := make(chan *presign.LocalPresignData, len(presignPIDs))
-
-	presignOutputs := make([]*presign.LocalPresignData, len(presignPIDs))
-	outputLock := &sync.RWMutex{}
-
-	for j, presignPID := range presignPIDs {
-		params := tss.NewParameters(presignP2pCtx, presignPID, len(presignPIDs), newThreshold)
-		P := presign.NewLocalParty(params, presignKeys[j], presignOutCh, presignEndCh).(*presign.LocalParty)
-		presignParties = append(presignParties, P)
-		go func(P *presign.LocalParty) {
-			if err := P.Start(); err != nil {
-				presignErrCh <- err
-			}
-		}(P)
-	}
-
-	var presignEnded int32
-	for {
-		fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
-		select {
-		case err := <-presignErrCh:
-			common.Logger.Errorf("Error: %s", err)
-			assert.FailNow(t, err.Error())
-			return
-
-		case msg := <-presignOutCh:
-			dest := msg.GetTo()
-			if dest == nil {
-				for _, P := range presignParties {
-					if P.PartyID().Index == msg.GetFrom().Index {
-						continue
-					}
-					go updater(P, msg, presignErrCh)
-				}
-			} else {
-				if dest[0].Index == msg.GetFrom().Index {
-					t.Fatalf("party %d tried to send a message to itself (%d)", dest[0].Index, msg.GetFrom().Index)
-				}
-				go updater(presignParties[dest[0].Index], msg, presignErrCh)
-			}
-
-		case presignData := <-presignEndCh:
-			atomic.AddInt32(&presignEnded, 1)
-
-			outputLock.Lock()
-			for i, presignID := range presignPIDs {
-				if presignID.Id == presignData.PartyId {
-					presignOutputs[i] = presignData
-				}
-			}
-			outputLock.Unlock()
-
-			if atomic.LoadInt32(&presignEnded) == int32(len(presignPIDs)) {
-				t.Logf("Presign done. Received presign data from %d participants", presignEnded)
 				goto signing
 			}
 		}
@@ -238,11 +160,11 @@ signing:
 
 	signErrCh := make(chan *tss.Error, len(signPIDs))
 	signOutCh := make(chan tss.Message, len(signPIDs))
-	signEndCh := make(chan *common.ECSignature, len(signPIDs))
+	signEndCh := make(chan *signing.SignatureData, len(signPIDs))
 
 	for j, signPID := range signPIDs {
 		params := tss.NewParameters(signP2pCtx, signPID, len(signPIDs), newThreshold)
-		P := signing.NewLocalParty(big.NewInt(42), params, *presignOutputs[j], signOutCh, signEndCh).(*signing.LocalParty)
+		P := signing.NewLocalParty(big.NewInt(42), params, signKeys[j], signOutCh, signEndCh).(*signing.LocalParty)
 		signParties = append(signParties, P)
 		go func(P *signing.LocalParty) {
 			if err := P.Start(); err != nil {
@@ -253,7 +175,6 @@ signing:
 
 	var signEnded int32
 	for {
-		fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
 		select {
 		case err := <-signErrCh:
 			common.Logger.Errorf("Error: %s", err)
@@ -278,24 +199,28 @@ signing:
 
 		case signData := <-signEndCh:
 			atomic.AddInt32(&signEnded, 1)
-
 			if atomic.LoadInt32(&signEnded) == int32(len(signPIDs)) {
 				t.Logf("Signing done. Received sign data from %d participants", signEnded)
 
-				// BEGIN ECDSA verify
-				pkX, pkY := signKeys[0].ECDSAPub.X(), signKeys[0].ECDSAPub.Y()
-				pk := ecdsa.PublicKey{
+				// BEGIN EDDSA verify
+				pkX, pkY := signKeys[0].EDDSAPub.X(), signKeys[0].EDDSAPub.Y()
+				pk := edwards.PublicKey{
 					Curve: tss.EC(),
 					X:     pkX,
 					Y:     pkY,
 				}
-				ok := ecdsa.Verify(&pk, big.NewInt(42).Bytes(),
-					new(big.Int).SetBytes(signData.R),
-					new(big.Int).SetBytes(signData.S))
 
-				assert.True(t, ok, "ecdsa verify must pass")
-				t.Log("ECDSA signing test done.")
-				// END ECDSA verify
+				newSig, err := edwards.ParseSignature(signData.Signature.Signature)
+				if err != nil {
+					println("new sig error, ", err.Error())
+				}
+
+				ok := edwards.Verify(&pk, big.NewInt(42).Bytes(),
+					newSig.R, newSig.S)
+
+				assert.True(t, ok, "eddsa verify must pass")
+				t.Log("EDDSA signing test done.")
+				// END EDDSA verify
 
 				return
 			}

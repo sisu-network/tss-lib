@@ -4,23 +4,21 @@
 // terms governing use, modification, and redistribution, is contained in the
 // file LICENSE at the root of the source code distribution tree.
 
-package presign
+package signing
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"math/big"
-	"runtime"
 	"sync/atomic"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/agl/ed25519/edwards25519"
+	"github.com/decred/dcrd/dcrec/edwards/v2"
 	"github.com/ipfs/go-log"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/sisu-network/tss-lib/common"
-	"github.com/sisu-network/tss-lib/crypto"
-	"github.com/sisu-network/tss-lib/ecdsa/keygen"
+	"github.com/sisu-network/tss-lib/eddsa/keygen"
 	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
 )
@@ -38,6 +36,9 @@ func setUp(level string) {
 
 func TestE2EConcurrent(t *testing.T) {
 	setUp("info")
+
+	tss.SetCurve(edwards.Edwards())
+
 	threshold := testThreshold
 
 	// PHASE: load keygen fixtures
@@ -46,23 +47,23 @@ func TestE2EConcurrent(t *testing.T) {
 	assert.Equal(t, testThreshold+1, len(keys))
 	assert.Equal(t, testThreshold+1, len(signPIDs))
 
-	// PHASE: presign
-	// use a shuffled selection of the list of parties for this test
+	// PHASE: signing
+
 	p2pCtx := tss.NewPeerContext(signPIDs)
 	parties := make([]*LocalParty, 0, len(signPIDs))
 
 	errCh := make(chan *tss.Error, len(signPIDs))
 	outCh := make(chan tss.Message, len(signPIDs))
-	endCh := make(chan *LocalPresignData, len(signPIDs))
+	endCh := make(chan *SignatureData, len(signPIDs))
 
 	updater := test.SharedPartyUpdater
 
+	msg := big.NewInt(200)
 	// init the parties
-	msg := common.GetRandomPrimeInt(256)
 	for i := 0; i < len(signPIDs); i++ {
 		params := tss.NewParameters(p2pCtx, signPIDs[i], len(signPIDs), threshold)
 
-		P := NewLocalParty(params, keys[i], outCh, endCh).(*LocalParty)
+		P := NewLocalParty(msg, params, keys[i], outCh, endCh).(*LocalParty)
 		parties = append(parties, P)
 		go func(P *LocalParty) {
 			if err := P.Start(); err != nil {
@@ -72,14 +73,13 @@ func TestE2EConcurrent(t *testing.T) {
 	}
 
 	var ended int32
-presign:
+signing:
 	for {
-		fmt.Printf("ACTIVE GOROUTINES: %d\n", runtime.NumGoroutine())
 		select {
 		case err := <-errCh:
 			common.Logger.Errorf("Error: %s", err)
 			assert.FailNow(t, err.Error())
-			break presign
+			break signing
 
 		case msg := <-outCh:
 			dest := msg.GetTo()
@@ -97,61 +97,47 @@ presign:
 				go updater(parties[dest[0].Index], msg, errCh)
 			}
 
-		case data := <-endCh:
+		case <-endCh:
 			atomic.AddInt32(&ended, 1)
-
 			if atomic.LoadInt32(&ended) == int32(len(signPIDs)) {
-				t.Logf("Done. Received signature data from %d participants %+v", ended, data)
-
-				// bigR is stored as bytes for the OneRoundData protobuf struct
-				bigRX, bigRY := new(big.Int).SetBytes(parties[0].temp.BigR.GetX()), new(big.Int).SetBytes(parties[0].temp.BigR.GetY())
-				bigR := crypto.NewECPointNoCurveCheck(tss.EC(), bigRX, bigRY)
-
-				r := parties[0].temp.rI.X()
-				fmt.Printf("sign result: R(%s, %s), r=%s\n", bigR.X().String(), bigR.Y().String(), r.String())
-
-				modN := common.ModInt(tss.EC().Params().N)
+				t.Logf("Done. Received signature data from %d participants", ended)
+				R := parties[0].temp.r
 
 				// BEGIN check s correctness
-				sumS := big.NewInt(0)
+				sumS := parties[0].temp.si
+				for i, p := range parties {
+					if i == 0 {
+						continue
+					}
 
-				for _, P := range parties {
-					si := calculateSi(P.temp.LocalPresignData, msg)
-					sumS = modN.Add(sumS, si)
+					var tmpSumS [32]byte
+					edwards25519.ScMulAdd(&tmpSumS, sumS, bigIntToEncodedBytes(big.NewInt(1)), p.temp.si)
+					sumS = &tmpSumS
 				}
-
-				fmt.Printf("S: %s\n", sumS.String())
+				fmt.Printf("S: %s\n", encodedBytesToBigInt(sumS).String())
+				fmt.Printf("R: %s\n", R.String())
 				// END check s correctness
 
-				// BEGIN ECDSA verify
-				pkX, pkY := keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y()
-				pk := ecdsa.PublicKey{
+				// BEGIN EDDSA verify
+				pkX, pkY := keys[0].EDDSAPub.X(), keys[0].EDDSAPub.Y()
+				pk := edwards.PublicKey{
 					Curve: tss.EC(),
 					X:     pkX,
 					Y:     pkY,
 				}
-				ok := ecdsa.Verify(&pk, msg.Bytes(), bigR.X(), sumS)
-				assert.True(t, ok, "ecdsa verify must pass")
 
-				btcecSig := &btcec.Signature{R: r, S: sumS}
-				btcecSig.Verify(msg.Bytes(), (*btcec.PublicKey)(&pk))
-				assert.True(t, ok, "ecdsa verify 2 must pass")
-				// END ECDSA verify
+				newSig, err := edwards.ParseSignature(parties[0].data.Signature.Signature)
+				if err != nil {
+					println("new sig error, ", err.Error())
+				}
 
-				break presign
+				ok := edwards.Verify(&pk, msg.Bytes(), newSig.R, newSig.S)
+				assert.True(t, ok, "eddsa verify must pass")
+				t.Log("EDDSA signing test done.")
+				// END EDDSA verify
+
+				break signing
 			}
 		}
 	}
-
-	// Do not remove. This function can be used in case we want to regen the presign data.
-	// SavePresignData(parties)
-}
-
-func calculateSi(data *LocalPresignData, msg *big.Int) (sI *big.Int) {
-	N := tss.EC().Params().N
-	modN := common.ModInt(N)
-
-	kI, rSigmaI := new(big.Int).SetBytes(data.KI), new(big.Int).SetBytes(data.RSigmaI)
-	sI = modN.Add(modN.Mul(msg, kI), rSigmaI)
-	return
 }
