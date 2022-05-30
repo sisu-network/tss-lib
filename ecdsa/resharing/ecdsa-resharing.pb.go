@@ -13,8 +13,8 @@
 package resharing
 
 import (
-	common "github.com/sisu-network/tss-lib/common"
 	proto "github.com/golang/protobuf/proto"
+	common "github.com/sisu-network/tss-lib/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

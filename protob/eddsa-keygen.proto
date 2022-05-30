@@ -8,6 +8,8 @@ syntax = "proto3";
 
 option go_package = "github.com/sisu-network/tss-lib/eddsa/keygen";
 
+package eddsa.keygen;
+
 import "protob/shared.proto";
 
 /*
