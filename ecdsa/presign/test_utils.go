@@ -19,17 +19,34 @@ func LoadPresignTestFixture(n int) ([]LocalPresignData, tss.SortedPartyIDs, erro
 		panic(fmt.Sprintf("n and BigSJ does not match: %d %d", n, len(presigns[0].BigSJ)))
 	}
 
-	keys := make([]*big.Int, n)
+	type wrapper struct {
+		partyId *tss.PartyID
+		presign LocalPresignData
+	}
+
+	wrappers := make([]*wrapper, n)
 
 	for i, presign := range presigns {
 		pMoniker := presign.PartyId
+		key := new(big.Int).SetBytes([]byte(presign.PartyId))
 
-		keys[i] = new(big.Int).SetBytes([]byte(presign.PartyId))
-		partyIds[i] = tss.NewPartyID(pMoniker, pMoniker, keys[i])
+		partyIds[i] = tss.NewPartyID(pMoniker, pMoniker, key)
+		wrappers[i] = &wrapper{
+			partyId: partyIds[i],
+			presign: presigns[i],
+		}
 	}
 
 	sortedPIDs := tss.SortPartyIDs(partyIds)
-	sort.Slice(presigns, func(i, j int) bool { return keys[i].Cmp(keys[j]) == -1 })
+
+	// Sort the wrapper using the same sorting function used for SortPartyIDs
+	sort.Slice(wrappers, func(i, j int) bool {
+		return wrappers[i].partyId.KeyInt().Cmp(wrappers[j].partyId.KeyInt()) == -1
+	})
+
+	for i := range wrappers {
+		presigns[i] = wrappers[i].presign
+	}
 
 	return presigns, sortedPIDs, nil
 }

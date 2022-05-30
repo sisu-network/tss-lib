@@ -165,7 +165,6 @@ func TestE2EConcurrent(t *testing.T) {
 
 presign:
 	// PHASE: presigning
-	fmt.Println("PRESIGN STARTED")
 	presignKeys, presignPIDs := newKeys, newPIDs
 	presignP2pCtx := tss.NewPeerContext(presignPIDs)
 	presignParties := make([]*presign.LocalParty, 0, len(presignPIDs))

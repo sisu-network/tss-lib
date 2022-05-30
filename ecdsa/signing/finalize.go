@@ -155,6 +155,7 @@ func (round *finalization) Start() *tss.Error {
 
 	ourSI := round.temp.sI
 	otherSIs := make(map[*tss.PartyID]*big.Int, len(Ps)-1)
+
 	var multiErr error
 	for j, msg := range round.temp.signRound1Message {
 		if j == i {
@@ -166,7 +167,7 @@ func (round *finalization) Start() *tss.Error {
 
 		if !msg.ValidateBasic() {
 			culprits = append(culprits, Pj)
-			multiErr = multierror.Append(multiErr, fmt.Errorf("round 8: unexpected abort message while in success mode: %+v", r1msg))
+			multiErr = multierror.Append(multiErr, fmt.Errorf("round 1: unexpected abort message while in success mode: %+v", r1msg))
 			continue
 		}
 		sI := r1msg.Si
