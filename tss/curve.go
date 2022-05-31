@@ -23,6 +23,11 @@ import (
 	"github.com/decred/dcrd/dcrec/edwards/v2"
 )
 
+const (
+	EcdsaScheme = "ecdsa"
+	EddsaScheme = "eddsa"
+)
+
 var (
 	ed, ec elliptic.Curve
 )
@@ -36,9 +41,9 @@ func init() {
 // EC returns the current elliptic curve in use. The default is secp256k1
 func EC(scheme string) elliptic.Curve {
 	switch strings.ToLower(scheme) {
-	case "", "ec", "ecdsa", "secp256k1":
+	case "", EcdsaScheme:
 		return ec
-	case "ed", "eddsa":
+	case EddsaScheme:
 		return ed
 	default:
 		panic(fmt.Errorf("Unknown curve: %s", scheme))
@@ -54,16 +59,3 @@ func GetCurveScheme(curve elliptic.Curve) string {
 
 	panic(fmt.Errorf("Unknown curve %v", curve))
 }
-
-// // EC returns the current elliptic curve in use. The default is secp256k1
-// func EC() elliptic.Curve {
-// 	return ec
-// }
-
-// // SetCurve sets the curve used by TSS. Must be called before Start. The default is secp256k1
-// func SetCurve(curve elliptic.Curve) {
-// 	if curve == nil {
-// 		panic(errors.New("SetCurve received a nil curve"))
-// 	}
-// 	ec = curve
-// }
