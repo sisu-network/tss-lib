@@ -31,20 +31,28 @@ var (
 func init() {
 	ec = s256k1.S256()
 	ed = edwards.Edwards()
-
-	fmt.Println("ed.Params().Name = ", ed.Params().Name)
 }
 
 // EC returns the current elliptic curve in use. The default is secp256k1
-func EC(name string) elliptic.Curve {
-	switch strings.ToLower(name) {
+func EC(scheme string) elliptic.Curve {
+	switch strings.ToLower(scheme) {
 	case "", "ec", "ecdsa", "secp256k1":
 		return ec
 	case "ed", "eddsa":
 		return ed
 	default:
-		panic(fmt.Errorf("Unknown curve: %s", name))
+		panic(fmt.Errorf("Unknown curve: %s", scheme))
 	}
+}
+
+func GetCurveScheme(curve elliptic.Curve) string {
+	if curve == ec {
+		return "ecdsa"
+	} else if curve == ed {
+		return "eddsa"
+	}
+
+	panic(fmt.Errorf("Unknown curve %v", curve))
 }
 
 // // EC returns the current elliptic curve in use. The default is secp256k1

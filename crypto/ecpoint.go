@@ -344,22 +344,27 @@ func (p *ECPoint) GobDecode(curve string, buf []byte) error {
 
 // crypto.ECPoint is not inherently json marshal-able
 func (p *ECPoint) MarshalJSON() ([]byte, error) {
+	scheme := tss.GetCurveScheme(p.curve)
+
 	return json.Marshal(&struct {
+		Curve  string
 		Coords [2]*big.Int
 	}{
+		Curve:  scheme,
 		Coords: p.coords,
 	})
 }
 
 func (p *ECPoint) UnmarshalJSON(payload []byte) error {
 	aux := &struct {
+		Curve  string
 		Coords [2]*big.Int
 	}{}
 	if err := json.Unmarshal(payload, &aux); err != nil {
 		return err
 	}
 
-	p.curve = tss.EC(p.curve.Params().Name)
+	p.curve = tss.EC(aux.Curve)
 	p.coords = [2]*big.Int{aux.Coords[0], aux.Coords[1]}
 	if !p.IsOnCurve() {
 		return errors.New("ECPoint.UnmarshalJSON: the point is not on the elliptic curve")
