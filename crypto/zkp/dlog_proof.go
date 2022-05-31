@@ -24,16 +24,16 @@ type (
 )
 
 // NewDLogProof constructs a new Schnorr ZK of the discrete logarithm of pho_i such that A = g^pho (GG18)
-func NewDLogProof(x *big.Int, X *crypto.ECPoint) (*DLogProof, error) {
+func NewDLogProof(curve string, x *big.Int, X *crypto.ECPoint) (*DLogProof, error) {
 	if x == nil || X == nil || !X.ValidateBasic() {
 		return nil, errors.New("NewDLogProof received nil or invalid value(s)")
 	}
-	ecParams := tss.EC().Params()
+	ecParams := tss.EC(curve).Params()
 	q := ecParams.N
-	g := crypto.NewECPointNoCurveCheck(tss.EC(), ecParams.Gx, ecParams.Gy) // already on the curve.
+	g := crypto.NewECPointNoCurveCheck(tss.EC(curve), ecParams.Gx, ecParams.Gy) // already on the curve.
 
 	a := common.GetRandomPositiveInt(q)
-	alpha := crypto.ScalarBaseMult(tss.EC(), a)
+	alpha := crypto.ScalarBaseMult(tss.EC(curve), a)
 
 	var c *big.Int
 	{
@@ -47,20 +47,20 @@ func NewDLogProof(x *big.Int, X *crypto.ECPoint) (*DLogProof, error) {
 }
 
 // NewDLogProof verifies a new Schnorr ZK proof of knowledge of the discrete logarithm (GG18Spec Fig. 16)
-func (pf *DLogProof) Verify(X *crypto.ECPoint) bool {
+func (pf *DLogProof) Verify(curve string, X *crypto.ECPoint) bool {
 	if pf == nil || !pf.ValidateBasic() {
 		return false
 	}
-	ecParams := tss.EC().Params()
+	ecParams := tss.EC(curve).Params()
 	q := ecParams.N
-	g := crypto.NewECPointNoCurveCheck(tss.EC(), ecParams.Gx, ecParams.Gy)
+	g := crypto.NewECPointNoCurveCheck(tss.EC(curve), ecParams.Gx, ecParams.Gy)
 
 	var c *big.Int
 	{
 		cHash := common.SHA512_256i(X.X(), X.Y(), g.X(), g.Y(), pf.Alpha.X(), pf.Alpha.Y())
 		c = common.RejectionSample(q, cHash)
 	}
-	tG := crypto.ScalarBaseMult(tss.EC(), pf.T)
+	tG := crypto.ScalarBaseMult(tss.EC(curve), pf.T)
 	Xc := X.ScalarMult(c)
 	aXc, err := pf.Alpha.Add(Xc)
 	if err != nil {

@@ -31,12 +31,12 @@ type (
 )
 
 // ProveRangeAlice implements Alice's range proof used in the MtA and MtAwc protocols from GG18Spec (9) Fig. 9.
-func ProveRangeAlice(pk *paillier.PublicKey, c, NTilde, h1, h2, m, r *big.Int) (*RangeProofAlice, error) {
+func ProveRangeAlice(curve string, pk *paillier.PublicKey, c, NTilde, h1, h2, m, r *big.Int) (*RangeProofAlice, error) {
 	if pk == nil || NTilde == nil || h1 == nil || h2 == nil || c == nil || m == nil || r == nil {
 		return nil, errors.New("ProveRangeAlice constructor received nil value(s)")
 	}
 
-	q := tss.EC().Params().N
+	q := tss.EC(curve).Params().N
 	q3 := new(big.Int).Mul(q, q)
 	q3.Mul(q3, q)
 	qNTilde := new(big.Int).Mul(q, NTilde)
@@ -103,13 +103,13 @@ func RangeProofAliceFromBytes(bzs [][]byte) (*RangeProofAlice, error) {
 	}, nil
 }
 
-func (pf *RangeProofAlice) Verify(pk *paillier.PublicKey, NTilde, h1, h2, c *big.Int) bool {
+func (pf *RangeProofAlice) Verify(curve string, pk *paillier.PublicKey, NTilde, h1, h2, c *big.Int) bool {
 	if pf == nil || !pf.ValidateBasic() || pk == nil || NTilde == nil || h1 == nil || h2 == nil || c == nil {
 		return false
 	}
 
 	NSq := new(big.Int).Mul(pk.N, pk.N)
-	q := tss.EC().Params().N
+	q := tss.EC(curve).Params().N
 	q3 := new(big.Int).Mul(q, q)
 	q3.Mul(q3, q)
 

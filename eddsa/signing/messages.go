@@ -88,7 +88,7 @@ func (m *SignRound2Message) UnmarshalDeCommitment() []*big.Int {
 }
 
 func (m *SignRound2Message) UnmarshalZKProof() (*zkp.DLogProof, error) {
-	point, err := crypto.NewECPointFromProtobuf(m.GetProofAlpha())
+	point, err := crypto.NewECPointFromProtobuf("eddsa", m.GetProofAlpha())
 	if err != nil {
 		return nil, err
 	}

@@ -132,7 +132,7 @@ func (m *PresignRound2Message) UnmarshalProofBob() (*mta.ProofBob, error) {
 }
 
 func (m *PresignRound2Message) UnmarshalProofBobWC() (*mta.ProofBobWC, error) {
-	return mta.ProofBobWCFromBytes(m.GetProofBobWc())
+	return mta.ProofBobWCFromBytes("ecdsa", m.GetProofBobWc())
 }
 
 // ----- //
@@ -182,22 +182,22 @@ func (m *PresignRound3Message) ValidateBasic() bool {
 		return false
 	}
 	// we have everything we need to validate the TProof here!
-	basePoint2, err := crypto.ECBasePoint2(tss.EC())
+	basePoint2, err := crypto.ECBasePoint2(tss.EC("ecdsa"))
 	if err != nil {
 		return false
 	}
-	return TI.ValidateBasic() && tProof.Verify(TI, basePoint2)
+	return TI.ValidateBasic() && tProof.Verify("ecdsa", TI, basePoint2)
 }
 
 func (m *PresignRound3Message) UnmarshalTI() (*crypto.ECPoint, error) {
 	if m.GetTI() == nil || !m.GetTI().ValidateBasic() {
 		return nil, errors.New("UnmarshalTI() X or Y coord is nil or did not validate")
 	}
-	return crypto.NewECPointFromProtobuf(m.GetTI())
+	return crypto.NewECPointFromProtobuf("ecdsa", m.GetTI())
 }
 
 func (m *PresignRound3Message) UnmarshalTProof() (*zkp.TProof, error) {
-	alpha, err := crypto.NewECPointFromProtobuf(m.GetTProofAlpha())
+	alpha, err := crypto.NewECPointFromProtobuf("ecdsa", m.GetTProofAlpha())
 	if err != nil {
 		return nil, err
 	}
@@ -274,11 +274,11 @@ func (m *PresignRound5Message) ValidateBasic() bool {
 }
 
 func (m *PresignRound5Message) UnmarshalRI() (*crypto.ECPoint, error) {
-	return crypto.NewECPointFromProtobuf(m.GetRI())
+	return crypto.NewECPointFromProtobuf("ecdsa", m.GetRI())
 }
 
 func (m *PresignRound5Message) UnmarshalPDLwSlackProof() (*zkp.PDLwSlackProof, error) {
-	return zkp.UnmarshalPDLwSlackProof(m.GetProofPdlWSlack())
+	return zkp.UnmarshalPDLwSlackProof("ecdsa", m.GetProofPdlWSlack())
 }
 
 // ----- //
@@ -365,15 +365,15 @@ func (m *PresignRound6Message) ValidateBasic() bool {
 }
 
 func (m *PresignRound6Message_SuccessData) UnmarshalSI() (*crypto.ECPoint, error) {
-	return crypto.NewECPointFromProtobuf(m.GetSI())
+	return crypto.NewECPointFromProtobuf("ecdsa", m.GetSI())
 }
 
 func (m *PresignRound6Message_SuccessData) UnmarshalSTProof() (*zkp.STProof, error) {
-	alpha, err := crypto.NewECPointFromProtobuf(m.GetStProofAlpha())
+	alpha, err := crypto.NewECPointFromProtobuf("ecdsa", m.GetStProofAlpha())
 	if err != nil {
 		return nil, err
 	}
-	beta, err := crypto.NewECPointFromProtobuf(m.GetStProofBeta())
+	beta, err := crypto.NewECPointFromProtobuf("ecdsa", m.GetStProofBeta())
 	if err != nil {
 		return nil, err
 	}
@@ -443,11 +443,11 @@ func (m *PresignRound7Message) ValidateBasic() bool {
 }
 
 func (m *PresignRound7Message_AbortData) UnmarshalSigmaIProof() (*zkp.ECDDHProof, error) {
-	a1, err := crypto.NewECPointFromProtobuf(m.GetEcddhProofA1())
+	a1, err := crypto.NewECPointFromProtobuf("ecdsa", m.GetEcddhProofA1())
 	if err != nil {
 		return nil, err
 	}
-	a2, err := crypto.NewECPointFromProtobuf(m.GetEcddhProofA2())
+	a2, err := crypto.NewECPointFromProtobuf("ecdsa", m.GetEcddhProofA2())
 	if err != nil {
 		return nil, err
 	}

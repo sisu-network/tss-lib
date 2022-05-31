@@ -18,10 +18,11 @@ import (
 )
 
 func TestSchnorrProof(t *testing.T) {
-	q := tss.EC().Params().N
+	curve := "ecdsa"
+	q := tss.EC(curve).Params().N
 	u := common.GetRandomPositiveInt(q)
-	uG := crypto.ScalarBaseMult(tss.EC(), u)
-	proof, _ := NewDLogProof(u, uG)
+	uG := crypto.ScalarBaseMult(tss.EC(curve), u)
+	proof, _ := NewDLogProof(curve, u, uG)
 
 	assert.True(t, proof.Alpha.IsOnCurve())
 	assert.NotZero(t, proof.Alpha.X())
@@ -30,25 +31,27 @@ func TestSchnorrProof(t *testing.T) {
 }
 
 func TestSchnorrProofVerify(t *testing.T) {
-	q := tss.EC().Params().N
+	curve := "ecdsa"
+	q := tss.EC(curve).Params().N
 	u := common.GetRandomPositiveInt(q)
-	X := crypto.ScalarBaseMult(tss.EC(), u)
+	X := crypto.ScalarBaseMult(tss.EC(curve), u)
 
-	proof, _ := NewDLogProof(u, X)
-	res := proof.Verify(X)
+	proof, _ := NewDLogProof(curve, u, X)
+	res := proof.Verify(curve, X)
 
 	assert.True(t, res, "verify result must be true")
 }
 
 func TestSchnorrProofVerifyBadX(t *testing.T) {
-	q := tss.EC().Params().N
+	curve := "ecdsa"
+	q := tss.EC(curve).Params().N
 	u := common.GetRandomPositiveInt(q)
 	u2 := common.GetRandomPositiveInt(q)
-	X := crypto.ScalarBaseMult(tss.EC(), u)
-	X2 := crypto.ScalarBaseMult(tss.EC(), u2)
+	X := crypto.ScalarBaseMult(tss.EC(curve), u)
+	X2 := crypto.ScalarBaseMult(tss.EC(curve), u2)
 
-	proof, _ := NewDLogProof(u2, X2)
-	res := proof.Verify(X)
+	proof, _ := NewDLogProof(curve, u2, X2)
+	res := proof.Verify(curve, X)
 
 	assert.False(t, res, "verify result must be false")
 }

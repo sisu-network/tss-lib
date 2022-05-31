@@ -104,11 +104,11 @@ signing:
 
 				// // bigR is stored as bytes for the OneRoundData protobuf struct
 				bigRX, bigRY := new(big.Int).SetBytes(presigns[0].BigR.GetX()), new(big.Int).SetBytes(presigns[0].BigR.GetY())
-				bigR := crypto.NewECPointNoCurveCheck(tss.EC(), bigRX, bigRY)
+				bigR := crypto.NewECPointNoCurveCheck(tss.EC("ecdsa"), bigRX, bigRY)
 
 				fmt.Printf("sign result: R(%s, %s)\n", bigR.X().String(), bigR.Y().String())
 
-				modN := common.ModInt(tss.EC().Params().N)
+				modN := common.ModInt(tss.EC("ecdsa").Params().N)
 
 				// BEGIN check s correctness
 				sumS := big.NewInt(0)
@@ -121,7 +121,7 @@ signing:
 				// BEGIN ECDSA verify
 				pkX, pkY := presigns[0].ECDSAPub.X(), presigns[0].ECDSAPub.Y()
 				pk := ecdsa.PublicKey{
-					Curve: tss.EC(),
+					Curve: tss.EC("ecdsa"),
 					X:     pkX,
 					Y:     pkY,
 				}

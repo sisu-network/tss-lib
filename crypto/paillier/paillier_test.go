@@ -158,24 +158,26 @@ func TestHomoAdd(t *testing.T) {
 
 func TestProofVerify(t *testing.T) {
 	setUp(t)
-	ki := common.MustGetRandomInt(256)                     // index
-	ui := common.GetRandomPositiveInt(tss.EC().Params().N) // ECDSA private
-	yX, yY := tss.EC().ScalarBaseMult(ui.Bytes())          // ECDSA public
-	proof := privateKey.Proof(ki, crypto.NewECPointNoCurveCheck(tss.EC(), yX, yY))
-	res, err := proof.Verify(publicKey.N, ki, crypto.NewECPointNoCurveCheck(tss.EC(), yX, yY))
+	curve := "ecdsa"
+	ki := common.MustGetRandomInt(256)                          // index
+	ui := common.GetRandomPositiveInt(tss.EC(curve).Params().N) // ECDSA private
+	yX, yY := tss.EC(curve).ScalarBaseMult(ui.Bytes())          // ECDSA public
+	proof := privateKey.Proof(ki, crypto.NewECPointNoCurveCheck(tss.EC(curve), yX, yY))
+	res, err := proof.Verify(publicKey.N, ki, crypto.NewECPointNoCurveCheck(tss.EC(curve), yX, yY))
 	assert.NoError(t, err)
 	assert.True(t, res, "proof verify result must be true")
 }
 
 func TestProofVerifyFail(t *testing.T) {
 	setUp(t)
-	ki := common.MustGetRandomInt(256)                     // index
-	ui := common.GetRandomPositiveInt(tss.EC().Params().N) // ECDSA private
-	yX, yY := tss.EC().ScalarBaseMult(ui.Bytes())          // ECDSA public
-	proof := privateKey.Proof(ki, crypto.NewECPointNoCurveCheck(tss.EC(), yX, yY))
+	curve := "ecdsa"
+	ki := common.MustGetRandomInt(256)                          // index
+	ui := common.GetRandomPositiveInt(tss.EC(curve).Params().N) // ECDSA private
+	yX, yY := tss.EC(curve).ScalarBaseMult(ui.Bytes())          // ECDSA public
+	proof := privateKey.Proof(ki, crypto.NewECPointNoCurveCheck(tss.EC(curve), yX, yY))
 	last := proof[len(proof)-1]
 	last.Sub(last, big.NewInt(1))
-	res, err := proof.Verify(publicKey.N, ki, crypto.NewECPointNoCurveCheck(tss.EC(), yX, yY))
+	res, err := proof.Verify(publicKey.N, ki, crypto.NewECPointNoCurveCheck(tss.EC(curve), yX, yY))
 	assert.NoError(t, err)
 	assert.False(t, res, "proof verify result must be true")
 }
@@ -191,12 +193,13 @@ func TestComputeL(t *testing.T) {
 }
 
 func TestGenerateXs(t *testing.T) {
+	curve := "ecdsa"
 	k := common.MustGetRandomInt(256)
 	sX := common.MustGetRandomInt(256)
 	sY := common.MustGetRandomInt(256)
 	N := common.GetRandomPrimeInt(2048)
 
-	xs := GenerateXs(13, k, N, crypto.NewECPointNoCurveCheck(tss.EC(), sX, sY))
+	xs := GenerateXs(13, k, N, crypto.NewECPointNoCurveCheck(tss.EC(curve), sX, sY))
 	assert.Equal(t, 13, len(xs))
 	for _, xi := range xs {
 		assert.True(t, common.IsNumberInMultiplicativeGroup(N, xi))

@@ -16,7 +16,7 @@ import (
 
 // PrepareForSigning(), Fig. 7
 func PrepareForSigning(i, pax int, xi *big.Int, ks []*big.Int) (wi *big.Int) {
-	modQ := common.ModInt(tss.EC().Params().N)
+	modQ := common.ModInt(tss.EC("eddsa").Params().N)
 	if len(ks) != pax {
 		panic(fmt.Errorf("PrepareForSigning: len(ks) != pax (%d != %d)", len(ks), pax))
 	}

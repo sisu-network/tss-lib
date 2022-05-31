@@ -104,7 +104,7 @@ func ecPointToExtendedElement(x *big.Int, y *big.Int) edwards25519.ExtendedGroup
 	encodedXBytes := bigIntToEncodedBytes(x)
 	encodedYBytes := bigIntToEncodedBytes(y)
 
-	z := common.GetRandomPositiveInt(tss.EC().Params().N)
+	z := common.GetRandomPositiveInt(tss.EC("eddsa").Params().N)
 	encodedZBytes := bigIntToEncodedBytes(z)
 
 	var fx, fy, fxy edwards25519.FieldElement

@@ -30,12 +30,12 @@ type (
 )
 
 // NewTProof constructs a new ZK proof of knowledge sigma_i, l_i such that T_i = g^sigma_i, h^l_i (GG20)
-func NewTProof(TI, h *crypto.ECPoint, sigmaI, lI *big.Int) (*TProof, error) {
+func NewTProof(curve string, TI, h *crypto.ECPoint, sigmaI, lI *big.Int) (*TProof, error) {
 	if TI == nil || h == nil || sigmaI == nil || lI == nil ||
 		!TI.ValidateBasic() || !h.ValidateBasic() {
 		return nil, errors.New("NewTProof received nil or invalid value(s)")
 	}
-	ec := tss.EC()
+	ec := tss.EC(curve)
 	ecParams := ec.Params()
 	q := ecParams.N
 	g := crypto.NewECPointNoCurveCheck(ec, ecParams.Gx, ecParams.Gy)
@@ -54,11 +54,11 @@ func NewTProof(TI, h *crypto.ECPoint, sigmaI, lI *big.Int) (*TProof, error) {
 	return &TProof{Alpha: alpha, T: t, U: u}, nil
 }
 
-func (pf *TProof) Verify(TI, h *crypto.ECPoint) bool {
+func (pf *TProof) Verify(curve string, TI, h *crypto.ECPoint) bool {
 	if pf == nil || !pf.ValidateBasic() {
 		return false
 	}
-	ec := tss.EC()
+	ec := tss.EC(curve)
 	ecParams := ec.Params()
 	q := ecParams.N
 	g := crypto.NewECPointNoCurveCheck(ec, ecParams.Gx, ecParams.Gy)
@@ -92,12 +92,12 @@ func (pf *TProof) ValidateBasic() bool {
 // ----- //
 
 // NewSTProof constructs a new ZK proof of knowledge sigma_i, l_i such that S_i = R^sigma_i, T_i = g^sigma_i h^l_i (GG20)
-func NewSTProof(TI, R, h *crypto.ECPoint, sigmaI, lI *big.Int) (*STProof, error) {
+func NewSTProof(curve string, TI, R, h *crypto.ECPoint, sigmaI, lI *big.Int) (*STProof, error) {
 	if TI == nil || R == nil || h == nil || sigmaI == nil || lI == nil ||
 		!TI.ValidateBasic() || !R.ValidateBasic() || !h.ValidateBasic() {
 		return nil, errors.New("NewSTProof received nil or invalid value(s)")
 	}
-	ec := tss.EC()
+	ec := tss.EC(curve)
 	ecParams := ec.Params()
 	q := ecParams.N
 	g := crypto.NewECPointNoCurveCheck(ec, ecParams.Gx, ecParams.Gy)
@@ -117,11 +117,11 @@ func NewSTProof(TI, R, h *crypto.ECPoint, sigmaI, lI *big.Int) (*STProof, error)
 	return &STProof{Alpha: alpha, Beta: beta, T: t, U: u}, nil
 }
 
-func (pf *STProof) Verify(SI, TI, R, h *crypto.ECPoint) bool {
+func (pf *STProof) Verify(curve string, SI, TI, R, h *crypto.ECPoint) bool {
 	if pf == nil || !pf.ValidateBasic() {
 		return false
 	}
-	ec := tss.EC()
+	ec := tss.EC(curve)
 	ecParams := ec.Params()
 	q := ecParams.N
 	g := crypto.NewECPointNoCurveCheck(ec, ecParams.Gx, ecParams.Gy)

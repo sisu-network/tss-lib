@@ -109,7 +109,7 @@ func (m *KGRound2Message2) UnmarshalDeCommitment() []*big.Int {
 }
 
 func (m *KGRound2Message2) UnmarshalZKProof() (*zkp.DLogProof, error) {
-	point, err := crypto.NewECPointFromProtobuf(m.GetProofAlpha())
+	point, err := crypto.NewECPointFromProtobuf("eddsa", m.GetProofAlpha())
 	if err != nil {
 		return nil, err
 	}

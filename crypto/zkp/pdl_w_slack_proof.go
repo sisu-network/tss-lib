@@ -48,8 +48,8 @@ var (
 	one = big.NewInt(1)
 )
 
-func NewPDLwSlackProof(wit PDLwSlackWitness, st PDLwSlackStatement) PDLwSlackProof {
-	q := tss.EC().Params().N
+func NewPDLwSlackProof(curve string, wit PDLwSlackWitness, st PDLwSlackStatement) PDLwSlackProof {
+	q := tss.EC(curve).Params().N
 	q3 := new(big.Int).Mul(q, q)
 	q3.Mul(q3, q)
 	qNTilde := new(big.Int).Mul(q, st.NTilde)
@@ -77,8 +77,8 @@ func NewPDLwSlackProof(wit PDLwSlackWitness, st PDLwSlackStatement) PDLwSlackPro
 	return PDLwSlackProof{z, u1, u2, u3, s1, s2, s3}
 }
 
-func (pf PDLwSlackProof) Verify(st PDLwSlackStatement) bool {
-	q := tss.EC().Params().N
+func (pf PDLwSlackProof) Verify(curve string, st PDLwSlackStatement) bool {
+	q := tss.EC(curve).Params().N
 
 	e := common.SHA512_256i(st.G.X(), st.G.Y(), st.Q.X(), st.Q.Y(), st.CipherText, pf.Z, pf.U1.X(), pf.U1.Y(), pf.U2, pf.U3)
 	gS1 := st.G.ScalarMult(pf.S1)
@@ -120,7 +120,7 @@ func (pf PDLwSlackProof) Marshal() ([][]byte, error) {
 	return bzs, nil
 }
 
-func UnmarshalPDLwSlackProof(bzs [][]byte) (*PDLwSlackProof, error) {
+func UnmarshalPDLwSlackProof(curve string, bzs [][]byte) (*PDLwSlackProof, error) {
 	bis := make([]*big.Int, len(bzs))
 	for i := range bis {
 		bis[i] = new(big.Int).SetBytes(bzs[i])
@@ -144,7 +144,7 @@ func UnmarshalPDLwSlackProof(bzs [][]byte) (*PDLwSlackProof, error) {
 	}
 	p := new(PDLwSlackProof)
 	p.Z = parsed[0][0]
-	U1, err := crypto.NewECPoint(tss.EC(), parsed[1][0], parsed[1][1])
+	U1, err := crypto.NewECPoint(tss.EC(curve), parsed[1][0], parsed[1][1])
 	if err != nil {
 		return nil, err
 	}

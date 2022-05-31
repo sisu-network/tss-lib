@@ -26,7 +26,7 @@ const (
 )
 
 func TestShareProtocol(t *testing.T) {
-	q := tss.EC().Params().N
+	q := tss.EC("").Params().N
 
 	sk, pk, err := paillier.GenerateKeyPair(testPaillierKeyLength, 10*time.Minute)
 	assert.NoError(t, err)
@@ -41,13 +41,13 @@ func TestShareProtocol(t *testing.T) {
 
 	cA, rA, err := pk.EncryptAndReturnRandomness(a)
 	assert.NoError(t, err)
-	pf, err := AliceInit(pk, a, cA, rA, NTildej, h1j, h2j)
+	pf, err := AliceInit("", pk, a, cA, rA, NTildej, h1j, h2j)
 	assert.NoError(t, err)
 
-	_, cB, betaPrm, pfB, err := BobMid(pk, pf, b, cA, NTildei, h1i, h2i, NTildej, h1j, h2j)
+	_, cB, betaPrm, pfB, err := BobMid("", pk, pf, b, cA, NTildei, h1i, h2i, NTildej, h1j, h2j)
 	assert.NoError(t, err)
 
-	alpha, err := AliceEnd(pk, pfB, h1i, h2i, cA, cB, NTildei, sk)
+	alpha, err := AliceEnd("", pk, pfB, h1i, h2i, cA, cB, NTildei, sk)
 	assert.NoError(t, err)
 
 	// expect: alpha = ab + betaPrm
@@ -58,14 +58,14 @@ func TestShareProtocol(t *testing.T) {
 }
 
 func TestShareProtocolWC(t *testing.T) {
-	q := tss.EC().Params().N
+	q := tss.EC("").Params().N
 
 	sk, pk, err := paillier.GenerateKeyPair(testPaillierKeyLength, 10*time.Minute)
 	assert.NoError(t, err)
 
 	a := common.GetRandomPositiveInt(q)
 	b := common.GetRandomPositiveInt(q)
-	gBX, gBY := tss.EC().ScalarBaseMult(b.Bytes())
+	gBX, gBY := tss.EC("").ScalarBaseMult(b.Bytes())
 
 	NTildei, h1i, h2i, err := keygen.LoadNTildeH1H2FromTestFixture(0)
 	assert.NoError(t, err)
@@ -74,15 +74,15 @@ func TestShareProtocolWC(t *testing.T) {
 
 	cA, rA, err := pk.EncryptAndReturnRandomness(a)
 	assert.NoError(t, err)
-	pf, err := AliceInit(pk, a, cA, rA, NTildej, h1j, h2j)
+	pf, err := AliceInit("", pk, a, cA, rA, NTildej, h1j, h2j)
 	assert.NoError(t, err)
 
-	gBPoint, err := crypto.NewECPoint(tss.EC(), gBX, gBY)
+	gBPoint, err := crypto.NewECPoint(tss.EC(""), gBX, gBY)
 	assert.NoError(t, err)
-	betaPrm, cB, pfB, err := BobMidWC(pk, pf, b, cA, NTildei, h1i, h2i, NTildej, h1j, h2j, gBPoint)
+	betaPrm, cB, pfB, err := BobMidWC("", pk, pf, b, cA, NTildei, h1i, h2i, NTildej, h1j, h2j, gBPoint)
 	assert.NoError(t, err)
 
-	muIJ, _, muRandIJ, err := AliceEndWC(pk, pfB, gBPoint, cA, cB, NTildei, h1i, h2i, sk)
+	muIJ, _, muRandIJ, err := AliceEndWC("", pk, pfB, gBPoint, cA, cB, NTildei, h1i, h2i, sk)
 	assert.NoError(t, err)
 	assert.NotNil(t, muRandIJ)
 

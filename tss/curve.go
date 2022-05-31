@@ -15,29 +15,47 @@ package tss
 
 import (
 	"crypto/elliptic"
-	"errors"
+	"fmt"
+	"strings"
 
 	s256k1 "github.com/btcsuite/btcd/btcec"
+
+	"github.com/decred/dcrd/dcrec/edwards/v2"
 )
 
 var (
-	ec elliptic.Curve
+	ed, ec elliptic.Curve
 )
 
 // Init default curve (secp256k1)
 func init() {
 	ec = s256k1.S256()
+	ed = edwards.Edwards()
+
+	fmt.Println("ed.Params().Name = ", ed.Params().Name)
 }
 
 // EC returns the current elliptic curve in use. The default is secp256k1
-func EC() elliptic.Curve {
-	return ec
+func EC(name string) elliptic.Curve {
+	switch strings.ToLower(name) {
+	case "", "ec", "ecdsa", "secp256k1":
+		return ec
+	case "ed", "eddsa":
+		return ed
+	default:
+		panic(fmt.Errorf("Unknown curve: %s", name))
+	}
 }
 
-// SetCurve sets the curve used by TSS. Must be called before Start. The default is secp256k1
-func SetCurve(curve elliptic.Curve) {
-	if curve == nil {
-		panic(errors.New("SetCurve received a nil curve"))
-	}
-	ec = curve
-}
+// // EC returns the current elliptic curve in use. The default is secp256k1
+// func EC() elliptic.Curve {
+// 	return ec
+// }
+
+// // SetCurve sets the curve used by TSS. Must be called before Start. The default is secp256k1
+// func SetCurve(curve elliptic.Curve) {
+// 	if curve == nil {
+// 		panic(errors.New("SetCurve received a nil curve"))
+// 	}
+// 	ec = curve
+// }

@@ -51,11 +51,11 @@ func NewECPointNoCurveCheck(curve elliptic.Curve, X, Y *big.Int) *ECPoint {
 	return &ECPoint{curve, [2]*big.Int{X, Y}, 0}
 }
 
-func NewECPointFromProtobuf(p *common.ECPoint) (*ECPoint, error) {
+func NewECPointFromProtobuf(curve string, p *common.ECPoint) (*ECPoint, error) {
 	if p == nil || p.GetX() == nil || p.GetY() == nil {
 		return nil, errors.New("nil protobuf point provided")
 	}
-	return NewECPoint(tss.EC(), new(big.Int).SetBytes(p.GetX()), new(big.Int).SetBytes(p.GetY()))
+	return NewECPoint(tss.EC(curve), new(big.Int).SetBytes(p.GetX()), new(big.Int).SetBytes(p.GetY()))
 }
 
 func (p *ECPoint) X() *big.Int {
@@ -304,7 +304,7 @@ func (p *ECPoint) GobEncode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (p *ECPoint) GobDecode(buf []byte) error {
+func (p *ECPoint) GobDecode(curve string, buf []byte) error {
 	reader := bytes.NewReader(buf)
 	var length uint32
 	if err := binary.Read(reader, binary.LittleEndian, &length); err != nil {
@@ -332,7 +332,7 @@ func (p *ECPoint) GobDecode(buf []byte) error {
 	if err := Y.GobDecode(y); err != nil {
 		return err
 	}
-	p.curve = tss.EC()
+	p.curve = tss.EC(curve)
 	p.coords = [2]*big.Int{X, Y}
 	if !p.IsOnCurve() {
 		return errors.New("ECPoint.UnmarshalJSON: the point is not on the elliptic curve")
@@ -358,7 +358,8 @@ func (p *ECPoint) UnmarshalJSON(payload []byte) error {
 	if err := json.Unmarshal(payload, &aux); err != nil {
 		return err
 	}
-	p.curve = tss.EC()
+
+	p.curve = tss.EC(p.curve.Params().Name)
 	p.coords = [2]*big.Int{aux.Coords[0], aux.Coords[1]}
 	if !p.IsOnCurve() {
 		return errors.New("ECPoint.UnmarshalJSON: the point is not on the elliptic curve")

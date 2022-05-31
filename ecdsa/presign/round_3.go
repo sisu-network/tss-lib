@@ -53,6 +53,7 @@ func (round *round3) Start() *tss.Error {
 				return
 			}
 			alphaIJ, err := mta.AliceEnd(
+				"ecdsa",
 				round.key.PaillierPKs[i],
 				proofBob,
 				round.key.H1j[i],
@@ -78,6 +79,7 @@ func (round *round3) Start() *tss.Error {
 				return
 			}
 			muIJ, muIJRec, muIJRand, err := mta.AliceEndWC(
+				"ecdsa",
 				round.key.PaillierPKs[i],
 				proofBobWC,
 				round.temp.bigWs[j],
@@ -111,7 +113,7 @@ func (round *round3) Start() *tss.Error {
 	round.temp.r7AbortData.MuIJ = common.BigIntsToBytes(muIJRecs)
 	round.temp.r7AbortData.MuRandIJ = common.BigIntsToBytes(muRandIJ)
 
-	q := tss.EC().Params().N
+	q := tss.EC("ecdsa").Params().N
 	modN := common.ModInt(q)
 
 	kI := new(big.Int).SetBytes(round.temp.KI)
@@ -137,18 +139,18 @@ func (round *round3) Start() *tss.Error {
 
 	// gg20: calculate T_i = g^sigma_i h^l_i
 	lI := common.GetRandomPositiveInt(q)
-	h, err := crypto.ECBasePoint2(tss.EC())
+	h, err := crypto.ECBasePoint2(tss.EC("ecdsa"))
 	if err != nil {
 		return round.WrapError(err, Pi)
 	}
 	hLI := h.ScalarMult(lI)
-	gSigmaI := crypto.ScalarBaseMult(tss.EC(), sigmaI)
+	gSigmaI := crypto.ScalarBaseMult(tss.EC("ecdsa"), sigmaI)
 	TI, err := gSigmaI.Add(hLI)
 	if err != nil {
 		return round.WrapError(err, Pi)
 	}
 	// gg20: generate the ZK proof of T_i, verified in ValidateBasic for the round 3 message
-	tProof, err := zkp.NewTProof(TI, h, sigmaI, lI)
+	tProof, err := zkp.NewTProof("ecdsa", TI, h, sigmaI, lI)
 	if err != nil {
 		return round.WrapError(err, Pi)
 	}

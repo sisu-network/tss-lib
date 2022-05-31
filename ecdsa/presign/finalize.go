@@ -43,7 +43,7 @@ func (round *finalization) Start() *tss.Error {
 	// Identifiable Abort Type 7 triggered during Phase 6 (GG20)
 	if round.abortingT7 {
 		common.Logger.Infof("round 8: Abort Type 7 code path triggered")
-		q := tss.EC().Params().N
+		q := tss.EC("ecdsa").Params().N
 		kIs := make([][]byte, len(Ps))
 		gMus := make([][]*crypto.ECPoint, len(Ps))
 		gNus := make([][]*crypto.ECPoint, len(Ps))
@@ -113,7 +113,7 @@ func (round *finalization) Start() *tss.Error {
 				if k == j {
 					continue
 				}
-				gMus[j][k] = crypto.ScalarBaseMult(tss.EC(), mu.Mod(mu, q))
+				gMus[j][k] = crypto.ScalarBaseMult(tss.EC("ecdsa"), mu.Mod(mu, q))
 			}
 		}
 		bigR := round.temp.rI
@@ -143,8 +143,8 @@ func (round *finalization) Start() *tss.Error {
 				gSigmaI, _ = gSigmaI.Add(gMuIJ)
 				gSigmaI, _ = gSigmaI.Add(gNuJI)
 			}
-			bigSI, _ := crypto.NewECPointFromProtobuf(round.temp.BigSJ[P.Id])
-			if !gSigmaIPfs[i].VerifySigmaI(tss.EC(), gSigmaI, bigR, bigSI) {
+			bigSI, _ := crypto.NewECPointFromProtobuf("ecdsa", round.temp.BigSJ[P.Id])
+			if !gSigmaIPfs[i].VerifySigmaI(tss.EC("ecdsa"), gSigmaI, bigR, bigSI) {
 				culprits = append(culprits, P)
 				continue
 			}
