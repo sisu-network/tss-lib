@@ -61,8 +61,8 @@ func (round *round2) Start() *tss.Error {
 		if _, found := h1H2Map[h2JHex]; found {
 			return round.WrapError(errors.New("this h2j was already used by another party"), msg.GetFrom())
 		}
-		h1H2Map[h1JHex], h1H2Map[h2JHex] = struct{}{}, struct{}{}
 
+		h1H2Map[h1JHex], h1H2Map[h2JHex] = struct{}{}, struct{}{}
 		wg.Add(2)
 		go func(j int, msg tss.ParsedMessage, r1msg *KGRound1Message, H1j, H2j, NTildej *big.Int) {
 			if dlnProof1, err := r1msg.UnmarshalDLNProof1(); err != nil || !dlnProof1.Verify(H1j, H2j, NTildej) {

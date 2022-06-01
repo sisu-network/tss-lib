@@ -14,7 +14,7 @@ import (
 	"github.com/sisu-network/tss-lib/crypto/commitments"
 	"github.com/sisu-network/tss-lib/crypto/vss"
 	"github.com/sisu-network/tss-lib/ecdsa/keygen"
-	"github.com/sisu-network/tss-lib/ecdsa/presign"
+	"github.com/sisu-network/tss-lib/ecdsa/signing"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -47,7 +47,7 @@ func (round *round1) Start() *tss.Error {
 		return round.WrapError(fmt.Errorf("t+1=%d is not satisfied by the key count of %d", round.Threshold()+1, len(ks)), round.PartyID())
 	}
 	newKs := round.NewParties().IDs().Keys()
-	wi, _, err := presign.PrepareForPresigning(i, len(round.OldParties().IDs()), xi, ks, bigXj)
+	wi, _, err := signing.PrepareForSigning(i, len(round.OldParties().IDs()), xi, ks, bigXj)
 	if err != nil {
 		return round.WrapError(err, round.PartyID())
 	}

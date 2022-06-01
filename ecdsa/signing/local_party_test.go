@@ -20,7 +20,7 @@ import (
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
-	"github.com/sisu-network/tss-lib/ecdsa/presign"
+	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/test"
 	"github.com/sisu-network/tss-lib/tss"
 )
@@ -41,9 +41,9 @@ func TestE2EConcurrent(t *testing.T) {
 	threshold := testThreshold
 
 	// PHASE: load keygen fixtures
-	presigns, signPIDs, err := presign.LoadPresignTestFixture(testThreshold + 1)
+	keys, signPIDs, err := keygen.LoadKeygenTestFixturesRandomSet(testThreshold+1, testParticipants)
 	assert.NoError(t, err, "should load keygen fixtures")
-	assert.Equal(t, testThreshold+1, len(presigns))
+	assert.Equal(t, testThreshold+1, len(keys))
 	assert.Equal(t, testThreshold+1, len(signPIDs))
 
 	// PHASE: signing
@@ -53,7 +53,7 @@ func TestE2EConcurrent(t *testing.T) {
 
 	errCh := make(chan *tss.Error, len(signPIDs))
 	outCh := make(chan tss.Message, len(signPIDs))
-	endCh := make(chan *common.ECSignature, len(signPIDs))
+	endCh := make(chan *SignatureData, len(signPIDs))
 
 	updater := test.SharedPartyUpdater
 
@@ -62,7 +62,7 @@ func TestE2EConcurrent(t *testing.T) {
 	for i := 0; i < len(signPIDs); i++ {
 		params := tss.NewParameters(p2pCtx, signPIDs[i], len(signPIDs), threshold)
 
-		P := NewLocalParty(msg, params, presigns[i], outCh, endCh).(*LocalParty)
+		P := NewLocalParty(msg, params, keys[i], outCh, endCh).(*LocalParty)
 		parties = append(parties, P)
 		go func(P *LocalParty) {
 			if err := P.Start(); err != nil {
@@ -102,11 +102,12 @@ signing:
 			if atomic.LoadInt32(&ended) == int32(len(signPIDs)) {
 				t.Logf("Done. Received signature data from %d participants %+v", ended, data)
 
-				// // bigR is stored as bytes for the OneRoundData protobuf struct
-				bigRX, bigRY := new(big.Int).SetBytes(presigns[0].BigR.GetX()), new(big.Int).SetBytes(presigns[0].BigR.GetY())
+				// bigR is stored as bytes for the OneRoundData protobuf struct
+				bigRX, bigRY := new(big.Int).SetBytes(parties[0].temp.BigR.GetX()), new(big.Int).SetBytes(parties[0].temp.BigR.GetY())
 				bigR := crypto.NewECPointNoCurveCheck(tss.EC("ecdsa"), bigRX, bigRY)
 
-				fmt.Printf("sign result: R(%s, %s)\n", bigR.X().String(), bigR.Y().String())
+				r := parties[0].temp.rI.X()
+				fmt.Printf("sign result: R(%s, %s), r=%s\n", bigR.X().String(), bigR.Y().String(), r.String())
 
 				modN := common.ModInt(tss.EC("ecdsa").Params().N)
 
@@ -119,7 +120,7 @@ signing:
 				// END check s correctness
 
 				// BEGIN ECDSA verify
-				pkX, pkY := presigns[0].ECDSAPub.X(), presigns[0].ECDSAPub.Y()
+				pkX, pkY := keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y()
 				pk := ecdsa.PublicKey{
 					Curve: tss.EC("ecdsa"),
 					X:     pkX,
@@ -128,7 +129,7 @@ signing:
 				ok := ecdsa.Verify(&pk, msg.Bytes(), bigR.X(), sumS)
 				assert.True(t, ok, "ecdsa verify must pass")
 
-				btcecSig := &btcec.Signature{R: bigR.X(), S: sumS}
+				btcecSig := &btcec.Signature{R: r, S: sumS}
 				btcecSig.Verify(msg.Bytes(), (*btcec.PublicKey)(&pk))
 				assert.True(t, ok, "ecdsa verify 2 must pass")
 

@@ -4,7 +4,7 @@
 // terms governing use, modification, and redistribution, is contained in the
 // file LICENSE at the root of the source code distribution tree.
 
-package presign
+package signing
 
 import (
 	"errors"
@@ -40,9 +40,9 @@ func (round *round5) Start() *tss.Error {
 		if j == i {
 			continue
 		}
-		r1msg2 := round.temp.presignRound1Message2s[j].Content().(*PresignRound1Message2)
-		r3msg := round.temp.presignRound3Messages[j].Content().(*PresignRound3Message)
-		r4msg := round.temp.presignRound4Messages[j].Content().(*PresignRound4Message)
+		r1msg2 := round.temp.signRound1Message2s[j].Content().(*SignRound1Message2)
+		r3msg := round.temp.signRound3Messages[j].Content().(*SignRound3Message)
+		r4msg := round.temp.signRound4Messages[j].Content().(*SignRound4Message)
 
 		// calculating Big R
 		SCj, SDj := r1msg2.UnmarshalCommitment(), r4msg.UnmarshalDeCommitment()
@@ -99,14 +99,14 @@ func (round *round5) Start() *tss.Error {
 	}
 	pdlWSlackPf := zkp.NewPDLwSlackProof("ecdsa", pdlWSlackWitness, pdlWSlackStatement)
 
-	r5msg := NewPresignRound5Message(Pi, bigRBarI, &pdlWSlackPf)
-	round.temp.presignRound5Messages[i] = r5msg
+	r5msg := NewSignRound5Message(Pi, bigRBarI, &pdlWSlackPf)
+	round.temp.signRound5Messages[i] = r5msg
 	round.out <- r5msg
 	return nil
 }
 
 func (round *round5) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.presignRound5Messages {
+	for j, msg := range round.temp.signRound5Messages {
 		if round.ok[j] {
 			continue
 		}
@@ -119,7 +119,7 @@ func (round *round5) Update() (bool, *tss.Error) {
 }
 
 func (round *round5) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*PresignRound5Message); ok {
+	if _, ok := msg.Content().(*SignRound5Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false

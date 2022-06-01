@@ -4,7 +4,7 @@
 // terms governing use, modification, and redistribution, is contained in the
 // file LICENSE at the root of the source code distribution tree.
 
-package presign
+package signing
 
 import (
 	"errors"
@@ -46,7 +46,7 @@ func (round *round3) Start() *tss.Error {
 		// Alice_end
 		go func(j int, Pj *tss.PartyID) {
 			defer wg.Done()
-			r2msg := round.temp.presignRound2Messages[j].Content().(*PresignRound2Message)
+			r2msg := round.temp.signRound2Messages[j].Content().(*SignRound2Message)
 			proofBob, err := r2msg.UnmarshalProofBob()
 			if err != nil {
 				errChs <- round.WrapError(errorspkg.Wrapf(err, "MtA: UnmarshalProofBob failed"), Pj)
@@ -72,7 +72,7 @@ func (round *round3) Start() *tss.Error {
 		// Alice_end_wc
 		go func(j int, Pj *tss.PartyID) {
 			defer wg.Done()
-			r2msg := round.temp.presignRound2Messages[j].Content().(*PresignRound2Message)
+			r2msg := round.temp.signRound2Messages[j].Content().(*SignRound2Message)
 			proofBobWC, err := r2msg.UnmarshalProofBobWC()
 			if err != nil {
 				errChs <- round.WrapError(errorspkg.Wrapf(err, "MtA: UnmarshalProofBobWC failed"), Pj)
@@ -160,14 +160,14 @@ func (round *round3) Start() *tss.Error {
 	round.temp.deltaI = deltaI
 	round.temp.sigmaI = sigmaI
 
-	r3msg := NewPresignRound3Message(Pi, deltaI, TI, tProof)
-	round.temp.presignRound3Messages[i] = r3msg
+	r3msg := NewSignRound3Message(Pi, deltaI, TI, tProof)
+	round.temp.signRound3Messages[i] = r3msg
 	round.out <- r3msg
 	return nil
 }
 
 func (round *round3) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.presignRound3Messages {
+	for j, msg := range round.temp.signRound3Messages {
 		if round.ok[j] {
 			continue
 		}
@@ -180,7 +180,7 @@ func (round *round3) Update() (bool, *tss.Error) {
 }
 
 func (round *round3) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*PresignRound3Message); ok {
+	if _, ok := msg.Content().(*SignRound3Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false

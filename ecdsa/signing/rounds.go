@@ -7,8 +7,7 @@
 package signing
 
 import (
-	"github.com/sisu-network/tss-lib/common"
-	"github.com/sisu-network/tss-lib/ecdsa/presign"
+	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -19,25 +18,56 @@ const (
 type (
 	base struct {
 		*tss.Parameters
-		presignData *presign.LocalPresignData
-		temp        *localTempData
-		out         chan<- tss.Message
-		end         chan<- *common.ECSignature
-		ok          []bool // `ok` tracks parties which have been verified by Update()
-		started     bool
-		number      int
+		key     *keygen.LocalPartySaveData
+		data    *SignatureData
+		temp    *localTempData
+		out     chan<- tss.Message
+		end     chan<- *SignatureData
+		ok      []bool // `ok` tracks parties which have been verified by Update()
+		started bool
+		number  int
 	}
 	round1 struct {
 		*base
 	}
-
-	finalization struct {
+	round2 struct {
 		*round1
+	}
+	round3 struct {
+		*round2
+	}
+	round4 struct {
+		*round3
+	}
+	round5 struct {
+		*round4
+	}
+	round6 struct {
+		*round5
+
+		// Trigger for when a consistency check fails during Phase 5 of the protocol, resulting in a Type 5 identifiable abort (GG20)
+		abortingT5 bool
+	}
+	// The final round for the one-round signing mode (see the README)
+	round7 struct {
+		*round6
+
+		// Trigger for when a consistency check fails during Phase 6 of the protocol, resulting in a Type 7 identifiable abort (GG20)
+		abortingT7 bool
+	}
+	finalization struct {
+		*round7
 	}
 )
 
 var (
 	_ tss.Round = (*round1)(nil)
+	_ tss.Round = (*round2)(nil)
+	_ tss.Round = (*round3)(nil)
+	_ tss.Round = (*round4)(nil)
+	_ tss.Round = (*round5)(nil)
+	_ tss.Round = (*round6)(nil)
+	_ tss.Round = (*round7)(nil)
 	_ tss.Round = (*finalization)(nil)
 )
 

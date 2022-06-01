@@ -4,7 +4,7 @@
 // terms governing use, modification, and redistribution, is contained in the
 // file LICENSE at the root of the source code distribution tree.
 
-package presign
+package signing
 
 import (
 	"errors"
@@ -40,10 +40,10 @@ func (round *round6) Start() *tss.Error {
 
 	errs := make(map[*tss.PartyID]error)
 	bigRBarJProducts := (*crypto.ECPoint)(nil)
-	BigRBarJ := make(map[string]*common.ECPoint, len(round.temp.presignRound5Messages))
-	for j, msg := range round.temp.presignRound5Messages {
+	BigRBarJ := make(map[string]*common.ECPoint, len(round.temp.signRound5Messages))
+	for j, msg := range round.temp.signRound5Messages {
 		Pj := round.Parties().IDs()[j]
-		r5msg := msg.Content().(*PresignRound5Message)
+		r5msg := msg.Content().(*SignRound5Message)
 		bigRBarJ, err := r5msg.UnmarshalRI()
 		if err != nil {
 			errs[Pj] = err
@@ -71,7 +71,7 @@ func (round *round6) Start() *tss.Error {
 			errs[Pj] = err
 			continue
 		}
-		r1msg1 := round.temp.presignRound1Message1s[j].Content().(*PresignRound1Message1)
+		r1msg1 := round.temp.signRound1Message1s[j].Content().(*SignRound1Message1)
 		pdlWSlackStatement := zkp.PDLwSlackStatement{
 			PK:         round.key.PaillierPKs[Pj.Index],
 			CipherText: new(big.Int).SetBytes(r1msg1.GetC()),
@@ -101,14 +101,14 @@ func (round *round6) Start() *tss.Error {
 			round.abortingT5 = true
 			common.Logger.Warnf("round 6: consistency check failed: g != R products, entering Type 5 identified abort")
 
-			r6msg := NewPresignRound6MessageAbort(Pi, &round.temp.r5AbortData)
-			round.temp.presignRound6Messages[i] = r6msg
+			r6msg := NewSignRound6MessageAbort(Pi, &round.temp.r5AbortData)
+			round.temp.signRound6Messages[i] = r6msg
 			round.out <- r6msg
 			return nil
 		}
 	}
 	// wipe sensitive data for gc, not used from here
-	round.temp.r5AbortData = PresignRound6Message_AbortData{}
+	round.temp.r5AbortData = SignRound6Message_AbortData{}
 
 	round.temp.BigRBarJ = BigRBarJ
 
@@ -137,14 +137,14 @@ func (round *round6) Start() *tss.Error {
 	round.temp.lI.Set(zero)
 	round.temp.TI, round.temp.lI = nil, nil
 
-	r6msg := NewPresignRound6MessageSuccess(Pi, bigSI, stPf)
-	round.temp.presignRound6Messages[i] = r6msg
+	r6msg := NewSignRound6MessageSuccess(Pi, bigSI, stPf)
+	round.temp.signRound6Messages[i] = r6msg
 	round.out <- r6msg
 	return nil
 }
 
 func (round *round6) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.presignRound6Messages {
+	for j, msg := range round.temp.signRound6Messages {
 		if round.ok[j] {
 			continue
 		}
@@ -157,7 +157,7 @@ func (round *round6) Update() (bool, *tss.Error) {
 }
 
 func (round *round6) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*PresignRound6Message); ok {
+	if _, ok := msg.Content().(*SignRound6Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false

@@ -9,6 +9,7 @@ package keygen
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/sisu-network/tss-lib/crypto"
@@ -76,6 +77,9 @@ func (preParams LocalPreParams) ValidateWithProof() bool {
 
 // BuildLocalSaveDataSubset re-creates the LocalPartySaveData to contain data for only the list of signing parties.
 func BuildLocalSaveDataSubset(sourceData LocalPartySaveData, sortedIDs tss.SortedPartyIDs) LocalPartySaveData {
+	fmt.Println("sourceData.Ks = ", len(sourceData.Ks))
+	fmt.Println("sortedIDs = ", len(sortedIDs))
+
 	keysToIndices := make(map[string]int, len(sourceData.Ks))
 	for j, kj := range sourceData.Ks {
 		keysToIndices[hex.EncodeToString(kj.Bytes())] = j

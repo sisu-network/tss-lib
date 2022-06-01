@@ -4,7 +4,7 @@
 // terms governing use, modification, and redistribution, is contained in the
 // file LICENSE at the root of the source code distribution tree.
 
-package presign
+package signing
 
 import (
 	"fmt"
@@ -15,8 +15,8 @@ import (
 	"github.com/sisu-network/tss-lib/tss"
 )
 
-// PrepareForPresigning(), GG18Spec (11) Fig. 14
-func PrepareForPresigning(i, pax int, xi *big.Int, ks []*big.Int, bigXs []*crypto.ECPoint) (wi *big.Int, bigWs []*crypto.ECPoint, err error) {
+// PrepareForSigning(), GG18Spec (11) Fig. 14
+func PrepareForSigning(i, pax int, xi *big.Int, ks []*big.Int, bigXs []*crypto.ECPoint) (wi *big.Int, bigWs []*crypto.ECPoint, err error) {
 	modQ := common.ModInt(tss.EC("ecdsa").Params().N)
 	if len(ks) != len(bigXs) {
 		panic(fmt.Errorf("PrepareForSigning: len(ks) != len(bigXs) (%d != %d)", len(ks), len(bigXs)))

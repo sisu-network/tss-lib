@@ -7,6 +7,7 @@
 package signing
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
@@ -17,7 +18,8 @@ import (
 
 	"github.com/sisu-network/tss-lib/common"
 	"github.com/sisu-network/tss-lib/crypto"
-	"github.com/sisu-network/tss-lib/ecdsa/presign"
+	"github.com/sisu-network/tss-lib/crypto/paillier"
+	"github.com/sisu-network/tss-lib/crypto/zkp"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -25,20 +27,37 @@ const (
 	TaskNameFinalize = "signing-finalize"
 )
 
+// -----
+// One Round Finalization (async/offline)
+// -----
+
+// FinalizeGetOurSigShare is called in one-round signing mode after the online rounds have finished to compute s_i.
+func FinalizeGetOurSigShare(state *SignatureData, msg *big.Int) (sI *big.Int) {
+	data := state.GetOneRoundData()
+
+	N := tss.EC("ecdsa").Params().N
+	modN := common.ModInt(N)
+
+	kI, rSigmaI := new(big.Int).SetBytes(data.GetKI()), new(big.Int).SetBytes(data.GetRSigmaI())
+	sI = modN.Add(modN.Mul(msg, kI), rSigmaI)
+	return
+}
+
 // FinalizeGetOurSigShare is called in one-round signing mode to build a final signature given others' s_i shares and a msg.
 // Note: each P in otherPs should correspond with that P's s_i at the same index in otherSIs.
 func FinalizeGetAndVerifyFinalSig(
-	presignData presign.LocalPresignData,
+	state *SignatureData,
 	pk *ecdsa.PublicKey,
 	msg *big.Int,
 	ourP *tss.PartyID,
 	ourSI *big.Int,
 	otherSIs map[*tss.PartyID]*big.Int,
-) (*common.ECSignature, *btcec.Signature, *tss.Error) {
+) (*SignatureData, *btcec.Signature, *tss.Error) {
 	if len(otherSIs) == 0 {
 		return nil, nil, FinalizeWrapError(errors.New("len(otherSIs) == 0"), ourP)
 	}
-	if presignData.T != int32(len(otherSIs)) {
+	data := state.GetOneRoundData()
+	if data.GetT() != int32(len(otherSIs)) {
 		return nil, nil, FinalizeWrapError(errors.New("len(otherSIs) != T"), ourP)
 	}
 
@@ -46,19 +65,17 @@ func FinalizeGetAndVerifyFinalSig(
 	modN := common.ModInt(N)
 
 	bigR, err := crypto.NewECPoint(tss.EC("ecdsa"),
-		new(big.Int).SetBytes(presignData.BigR.GetX()),
-		new(big.Int).SetBytes(presignData.BigR.GetY()))
+		new(big.Int).SetBytes(data.GetBigR().GetX()),
+		new(big.Int).SetBytes(data.GetBigR().GetY()))
 	if err != nil {
 		return nil, nil, FinalizeWrapError(err, ourP)
 	}
 
 	r, s := bigR.X(), ourSI
 	culprits := make([]*tss.PartyID, 0, len(otherSIs))
-
 	for Pj, sJ := range otherSIs {
-		bigRBarJBz := presignData.BigRBarJ[Pj.Id]
-		bigSJBz := presignData.BigSJ[Pj.Id]
-
+		bigRBarJBz := data.GetBigRBarJ()[Pj.Id]
+		bigSJBz := data.GetBigSJ()[Pj.Id]
 		if Pj == nil || bigRBarJBz == nil || bigSJBz == nil {
 			return nil, nil, FinalizeWrapError(errors.New("in loop: Pj or map value s_i is nil"), Pj)
 		}
@@ -126,18 +143,27 @@ func FinalizeGetAndVerifyFinalSig(
 	signature.Signature = append(r.Bytes(), s.Bytes()...)
 	signature.SignatureRecovery = []byte{byte(recId)}
 	signature.M = msg.Bytes()
+	state.Signature = signature
 
 	btcecSig := &btcec.Signature{R: r, S: s}
 	if ok = btcecSig.Verify(msg.Bytes(), (*btcec.PublicKey)(pk)); !ok {
 		return nil, nil, FinalizeWrapError(fmt.Errorf("signature verification 2 failed"), ourP)
 	}
 
-	return signature, btcecSig, nil
+	// SECURITY: to be safe the oneRoundData is no longer needed here and reuse of `r` can compromise the key
+	state.OneRoundData = nil
+
+	return state, btcecSig, nil
 }
 
 func FinalizeWrapError(err error, victim *tss.PartyID, culprits ...*tss.PartyID) *tss.Error {
 	return tss.NewError(err, TaskNameFinalize, 8, victim, culprits...)
 }
+
+// -----
+// Full Online Finalization &
+// Identify Aborts of "Type 7"
+// ------
 
 func (round *finalization) Start() *tss.Error {
 	if round.started {
@@ -151,26 +177,136 @@ func (round *finalization) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
-	culprits := make([]*tss.PartyID, 0, len(round.temp.signRound1Message))
+	culprits := make([]*tss.PartyID, 0, len(round.temp.signRound6Messages))
+
+	// Identifiable Abort Type 7 triggered during Phase 6 (GG20)
+	if round.abortingT7 {
+		common.Logger.Infof("round 8: Abort Type 7 code path triggered")
+		q := tss.EC("ecdsa").Params().N
+		kIs := make([][]byte, len(Ps))
+		gMus := make([][]*crypto.ECPoint, len(Ps))
+		gNus := make([][]*crypto.ECPoint, len(Ps))
+		gSigmaIPfs := make([]*zkp.ECDDHProof, len(Ps))
+		for i := range gMus {
+			gMus[i] = make([]*crypto.ECPoint, len(Ps))
+		}
+		for j := range gNus {
+			gNus[j] = make([]*crypto.ECPoint, len(Ps))
+		}
+	outer:
+		for j, msg := range round.temp.signRound7Messages {
+			Pj := round.Parties().IDs()[j]
+			var err error
+			var paiPKJ *paillier.PublicKey
+			if j == i {
+				paiPKJ = &round.key.PaillierSK.PublicKey
+			} else {
+				paiPKJ = round.key.PaillierPKs[j]
+			}
+
+			r7msgInner, ok := msg.Content().(*SignRound7Message).GetContent().(*SignRound7Message_Abort)
+			if !ok {
+				common.Logger.Warnf("round 8: unexpected success message while in aborting mode: %+v", r7msgInner)
+				culprits = append(culprits, Pj)
+				continue
+			}
+			r7msg := r7msgInner.Abort
+
+			// keep k_i and the g^sigma_i proof for later
+			kIs[j] = r7msg.GetKI()
+			if gSigmaIPfs[j], err = r7msg.UnmarshalSigmaIProof(); err != nil {
+				culprits = append(culprits, Pj)
+				continue
+			}
+
+			// content length sanity check
+			// note: the len equivalence of each of the slices in this msg have already been checked in ValidateBasic(), so just look at the UIJ slice here
+			if len(r7msg.GetMuIJ()) != len(Ps) {
+				culprits = append(culprits, Pj)
+				continue
+			}
+
+			// re-encrypt k_i to make sure it matches the one we have "on record"
+			cA, err := paiPKJ.EncryptWithChosenRandomness(
+				new(big.Int).SetBytes(r7msg.GetKI()),
+				new(big.Int).SetBytes(r7msg.GetKRandI()))
+			r1msg1 := round.temp.signRound1Message1s[j].Content().(*SignRound1Message1)
+			if err != nil || !bytes.Equal(cA.Bytes(), r1msg1.GetC()) {
+				culprits = append(culprits, Pj)
+				continue
+			}
+
+			mus := common.ByteSlicesToBigInts(r7msg.GetMuIJ())
+			muRands := common.ByteSlicesToBigInts(r7msg.GetMuRandIJ())
+
+			// check correctness of mu_i_j
+			if muIJ, muRandIJ := mus[i], muRands[i]; j != i {
+				cB, err := paiPKJ.EncryptWithChosenRandomness(muIJ, muRandIJ)
+				if err != nil || !bytes.Equal(cB.Bytes(), round.temp.c2JIs[j].Bytes()) {
+					culprits = append(culprits, Pj)
+					continue outer
+				}
+			}
+			// compute g^mu_i_j
+			for k, mu := range mus {
+				if k == j {
+					continue
+				}
+				gMus[j][k] = crypto.ScalarBaseMult(tss.EC("ecdsa"), mu.Mod(mu, q))
+			}
+		}
+		bigR := round.temp.rI
+		if 0 < len(culprits) {
+			goto fail
+		}
+		// compute g^nu_j_i's
+		for i := range Ps {
+			for j := range Ps {
+				if j == i {
+					continue
+				}
+				gWJKI := round.temp.bigWs[j].ScalarMultBytes(kIs[i])
+				gNus[i][j], _ = gWJKI.Sub(gMus[i][j])
+			}
+		}
+		// compute g^sigma_i's
+		for i, P := range Ps {
+			gWIMulKi := round.temp.bigWs[i].ScalarMultBytes(kIs[i])
+			gSigmaI := gWIMulKi
+			for j := range Ps {
+				if j == i {
+					continue
+				}
+				// add sum g^mu_i_j, sum g^nu_j_i
+				gMuIJ, gNuJI := gMus[i][j], gNus[j][i]
+				gSigmaI, _ = gSigmaI.Add(gMuIJ)
+				gSigmaI, _ = gSigmaI.Add(gNuJI)
+			}
+			bigSI, _ := crypto.NewECPointFromProtobuf("ecdsa", round.temp.BigSJ[P.Id])
+			if !gSigmaIPfs[i].VerifySigmaI(tss.EC("ecdsa"), gSigmaI, bigR, bigSI) {
+				culprits = append(culprits, P)
+				continue
+			}
+		}
+	fail:
+		return round.WrapError(errors.New("round 7 consistency check failed: y != bigSJ products, Type 7 identified abort, culprits known"), culprits...)
+	}
 
 	ourSI := round.temp.sI
 	otherSIs := make(map[*tss.PartyID]*big.Int, len(Ps)-1)
-
 	var multiErr error
-	for j, msg := range round.temp.signRound1Message {
+	for j, msg := range round.temp.signRound7Messages {
 		if j == i {
 			continue
 		}
 		Pj := round.Parties().IDs()[j]
-
-		r1msg := msg.Content().(*SignRound1Message)
-
-		if !msg.ValidateBasic() {
+		r7msgInner, ok := msg.Content().(*SignRound7Message).GetContent().(*SignRound7Message_SI)
+		if !ok {
 			culprits = append(culprits, Pj)
-			multiErr = multierror.Append(multiErr, fmt.Errorf("round 1: unexpected abort message while in success mode: %+v", r1msg))
+			multiErr = multierror.Append(multiErr, fmt.Errorf("round 8: unexpected abort message while in success mode: %+v", r7msgInner))
 			continue
 		}
-		sI := r1msg.Si
+		sI := r7msgInner.SI
 		otherSIs[Pj] = new(big.Int).SetBytes(sI)
 	}
 	if 0 < len(culprits) {
@@ -179,15 +315,15 @@ func (round *finalization) Start() *tss.Error {
 
 	pk := &ecdsa.PublicKey{
 		Curve: tss.EC("ecdsa"),
-		X:     round.presignData.ECDSAPub.X(),
-		Y:     round.presignData.ECDSAPub.Y(),
+		X:     round.key.ECDSAPub.X(),
+		Y:     round.key.ECDSAPub.Y(),
 	}
-	signature, _, err := FinalizeGetAndVerifyFinalSig(*round.presignData, pk, round.temp.m, round.PartyID(), ourSI, otherSIs)
+	data, _, err := FinalizeGetAndVerifyFinalSig(round.data, pk, round.temp.m, round.PartyID(), ourSI, otherSIs)
 	if err != nil {
 		return err
 	}
-
-	round.end <- signature
+	round.data = data
+	round.end <- round.data
 	return nil
 }
 

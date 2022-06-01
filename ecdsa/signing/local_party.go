@@ -12,7 +12,10 @@ import (
 	"math/big"
 
 	"github.com/sisu-network/tss-lib/common"
-	"github.com/sisu-network/tss-lib/ecdsa/presign"
+	"github.com/sisu-network/tss-lib/crypto"
+	cmt "github.com/sisu-network/tss-lib/crypto/commitments"
+	"github.com/sisu-network/tss-lib/crypto/mta"
+	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -26,16 +29,24 @@ type (
 		*tss.BaseParty
 		params *tss.Parameters
 
-		presignData presign.LocalPresignData
-		temp        localTempData
+		keys keygen.LocalPartySaveData
+		temp localTempData
+		data SignatureData
 
 		// outbound messaging
 		out chan<- tss.Message
-		end chan<- *common.ECSignature
+		end chan<- *SignatureData
 	}
 
 	localMessageStore struct {
-		signRound1Message []tss.ParsedMessage
+		signRound1Message1s,
+		signRound1Message2s,
+		signRound2Messages,
+		signRound3Messages,
+		signRound4Messages,
+		signRound5Messages,
+		signRound6Messages,
+		signRound7Messages []tss.ParsedMessage
 	}
 
 	localTempData struct {
@@ -43,7 +54,40 @@ type (
 
 		// temp data (thrown away after sign) / round 1
 		m,
+		wI,
+		cAKI,
+		rAKI,
+		deltaI,
+		sigmaI,
+		gammaI *big.Int
+		c1Is     []*big.Int
+		bigWs    []*crypto.ECPoint
+		gammaIG  *crypto.ECPoint
+		deCommit cmt.HashDeCommitment
+
+		// round 2
+		betas, // return value of Bob_mid
+		c1JIs,
+		c2JIs,
+		vJIs []*big.Int // return value of Bob_mid_wc
+		pI1JIs []*mta.ProofBob
+		pI2JIs []*mta.ProofBobWC
+
+		// round 3
+		lI *big.Int
+
+		// round 5
+		bigGammaJs  []*crypto.ECPoint
+		r5AbortData SignRound6Message_AbortData
+
+		// round 6
+		SignatureData_OneRoundData
+
+		// round 7
 		sI *big.Int
+		rI,
+		TI *crypto.ECPoint
+		r7AbortData SignRound7Message_AbortData
 	}
 )
 
@@ -51,28 +95,57 @@ type (
 func NewLocalParty(
 	msg *big.Int,
 	params *tss.Parameters,
-	presignData presign.LocalPresignData,
+	key keygen.LocalPartySaveData,
 	out chan<- tss.Message,
-	end chan<- *common.ECSignature,
+	end chan<- *SignatureData,
 ) tss.Party {
 	partyCount := len(params.Parties().IDs())
 	p := &LocalParty{
-		BaseParty:   new(tss.BaseParty),
-		params:      params,
-		presignData: presignData,
-		temp:        localTempData{},
-		out:         out,
-		end:         end,
+		BaseParty: new(tss.BaseParty),
+		params:    params,
+		keys:      keygen.BuildLocalSaveDataSubset(key, params.Parties().IDs()),
+		temp:      localTempData{},
+		data:      SignatureData{},
+		out:       out,
+		end:       end,
 	}
 	// msgs init
-	p.temp.signRound1Message = make([]tss.ParsedMessage, partyCount)
+	p.temp.signRound1Message1s = make([]tss.ParsedMessage, partyCount)
+	p.temp.signRound1Message2s = make([]tss.ParsedMessage, partyCount)
+	p.temp.signRound2Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.signRound3Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.signRound4Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.signRound5Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.signRound6Messages = make([]tss.ParsedMessage, partyCount)
+	p.temp.signRound7Messages = make([]tss.ParsedMessage, partyCount)
 	// temp data init
 	p.temp.m = msg
+	p.temp.c1Is = make([]*big.Int, partyCount)
+	p.temp.bigWs = make([]*crypto.ECPoint, partyCount)
+	p.temp.betas = make([]*big.Int, partyCount)
+	p.temp.c1JIs = make([]*big.Int, partyCount)
+	p.temp.c2JIs = make([]*big.Int, partyCount)
+	p.temp.pI1JIs = make([]*mta.ProofBob, partyCount)
+	p.temp.pI2JIs = make([]*mta.ProofBobWC, partyCount)
+	p.temp.vJIs = make([]*big.Int, partyCount)
+	p.temp.bigGammaJs = make([]*crypto.ECPoint, partyCount)
+	p.temp.r5AbortData.AlphaIJ = make([][]byte, partyCount)
+	p.temp.r5AbortData.BetaJI = make([][]byte, partyCount)
 	return p
 }
 
+// Constructs a new ECDSA signing party for one-round signing. The final SignatureData struct will be a partial struct containing only the data for a final signing round (see the readme).
+func NewLocalPartyWithOneRoundSign(
+	params *tss.Parameters,
+	key keygen.LocalPartySaveData,
+	out chan<- tss.Message,
+	end chan<- *SignatureData,
+) tss.Party {
+	return NewLocalParty(nil, params, key, out, end)
+}
+
 func (p *LocalParty) FirstRound() tss.Round {
-	return newRound1(p.params, &p.presignData, &p.temp, p.out, p.end)
+	return newRound1(p.params, &p.keys, &p.data, &p.temp, p.out, p.end)
 }
 
 func (p *LocalParty) Start() *tss.Error {
@@ -122,8 +195,22 @@ func (p *LocalParty) StoreMessage(msg tss.ParsedMessage) (bool, *tss.Error) {
 	// switch/case is necessary to store any messages beyond current round
 	// this does not handle message replays. we expect the caller to apply replay and spoofing protection.
 	switch msg.Content().(type) {
-	case *SignRound1Message:
-		p.temp.signRound1Message[fromPIdx] = msg
+	case *SignRound1Message1:
+		p.temp.signRound1Message1s[fromPIdx] = msg
+	case *SignRound1Message2:
+		p.temp.signRound1Message2s[fromPIdx] = msg
+	case *SignRound2Message:
+		p.temp.signRound2Messages[fromPIdx] = msg
+	case *SignRound3Message:
+		p.temp.signRound3Messages[fromPIdx] = msg
+	case *SignRound4Message:
+		p.temp.signRound4Messages[fromPIdx] = msg
+	case *SignRound5Message:
+		p.temp.signRound5Messages[fromPIdx] = msg
+	case *SignRound6Message:
+		p.temp.signRound6Messages[fromPIdx] = msg
+	case *SignRound7Message:
+		p.temp.signRound7Messages[fromPIdx] = msg
 	default: // unrecognised message, just ignore!
 		common.Logger.Warnf("unrecognised message ignored: %v", msg)
 		return false, nil

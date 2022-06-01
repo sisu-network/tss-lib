@@ -4,7 +4,7 @@
 // terms governing use, modification, and redistribution, is contained in the
 // file LICENSE at the root of the source code distribution tree.
 
-package presign
+package signing
 
 import (
 	"errors"
@@ -32,19 +32,19 @@ func (round *round7) Start() *tss.Error {
 	N := tss.EC("ecdsa").Params().N
 	modN := common.ModInt(N)
 
-	culprits := make([]*tss.PartyID, 0, len(round.temp.presignRound6Messages))
+	culprits := make([]*tss.PartyID, 0, len(round.temp.signRound6Messages))
 
 	// Identifiable Abort Type 5 triggered during Phase 5 (GG20)
 	if round.abortingT5 {
 		common.Logger.Infof("round 7: Abort Type 5 code path triggered")
 	outer:
-		for j, msg := range round.temp.presignRound6Messages {
+		for j, msg := range round.temp.signRound6Messages {
 			if j == i {
 				continue
 			}
 			Pj := round.Parties().IDs()[j]
-			r3msg := round.temp.presignRound3Messages[j].Content().(*PresignRound3Message)
-			r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*PresignRound6Message_Abort)
+			r3msg := round.temp.signRound3Messages[j].Content().(*SignRound3Message)
+			r6msgInner, ok := msg.Content().(*SignRound6Message).GetContent().(*SignRound6Message_Abort)
 			if !ok {
 				common.Logger.Warnf("round 7: unexpected success message while in aborting mode: %+v", r6msgInner)
 				culprits = append(culprits, Pj)
@@ -99,13 +99,13 @@ func (round *round7) Start() *tss.Error {
 		return round.WrapError(err, Pi)
 	}
 
-	bigSJ := make(map[string]*common.ECPoint, len(round.temp.presignRound6Messages))
+	bigSJ := make(map[string]*common.ECPoint, len(round.temp.signRound6Messages))
 	bigSJProducts := (*crypto.ECPoint)(nil)
 	var multiErr error
-	for j, msg := range round.temp.presignRound6Messages {
+	for j, msg := range round.temp.signRound6Messages {
 		Pj := round.Parties().IDs()[j]
-		r3msg := round.temp.presignRound3Messages[j].Content().(*PresignRound3Message)
-		r6msgInner, ok := msg.Content().(*PresignRound6Message).GetContent().(*PresignRound6Message_Success)
+		r3msg := round.temp.signRound3Messages[j].Content().(*SignRound3Message)
+		r6msgInner, ok := msg.Content().(*SignRound6Message).GetContent().(*SignRound6Message_Success)
 		if !ok {
 			culprits = append(culprits, Pj)
 			multiErr = multierror.Append(multiErr, fmt.Errorf("unexpected abort message while in success mode: %+v", r6msgInner))
@@ -164,29 +164,39 @@ func (round *round7) Start() *tss.Error {
 		common.Logger.Warnf("round 7: consistency check failed: y != bigSJ products, entering Type 7 identified abort")
 
 		// If we abort here, one-round mode won't matter now - we will proceed to round "8" anyway.
-		r7msg := NewPresignRound7MessageAbort(Pi, &round.temp.r7AbortData)
-		round.temp.presignRound7Messages[i] = r7msg
+		r7msg := NewSignRound7MessageAbort(Pi, &round.temp.r7AbortData)
+		round.temp.signRound7Messages[i] = r7msg
 		round.out <- r7msg
 		return nil
 	}
-
 	// wipe sensitive data for gc, not used from here
-	round.temp.r7AbortData = PresignRound7Message_AbortData{}
+	round.temp.r7AbortData = SignRound7Message_AbortData{}
 
+	// PRE-PROCESSING FINISHED
+	// If we are in one-round signing mode (msg is nil), we will exit out with the current state here and we are done.
 	round.temp.T = int32(len(round.Parties().IDs()) - 1)
+	round.data.OneRoundData = &round.temp.SignatureData_OneRoundData
+	if round.temp.m == nil {
+		round.end <- round.data
+		for j := range round.ok {
+			round.ok[j] = true
+		}
+		return nil
+	}
 
-	// Presign has succeeded
-	r7msg := NewPresignRound7MessageSuccess(round.PartyID())
-	round.temp.presignRound7Messages[i] = r7msg
+	// Continuing the full online protocol.
+	sI := FinalizeGetOurSigShare(round.data, round.temp.m)
+	round.temp.sI = sI
 
+	r7msg := NewSignRound7MessageSuccess(round.PartyID(), sI)
+	round.temp.signRound7Messages[i] = r7msg
 	round.out <- r7msg
-
 	return nil
 }
 
 func (round *round7) Update() (bool, *tss.Error) {
 	// Collect messages for the full online protocol OR identified abort of type 7.
-	for j, msg := range round.temp.presignRound7Messages {
+	for j, msg := range round.temp.signRound7Messages {
 		if round.ok[j] {
 			continue
 		}
@@ -200,13 +210,17 @@ func (round *round7) Update() (bool, *tss.Error) {
 
 func (round *round7) CanAccept(msg tss.ParsedMessage) bool {
 	// Collect messages for the full online protocol OR identified abort of type 7.
-	if _, ok := msg.Content().(*PresignRound7Message); ok {
+	if _, ok := msg.Content().(*SignRound7Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false
 }
 
 func (round *round7) NextRound() tss.Round {
+	// If we are in one-round signing mode (msg is nil), we will exit out with the current state here and there are no further rounds.
+	if !round.abortingT7 && round.temp.m == nil {
+		return nil
+	}
 	// Continuing the full online protocol.
 	round.started = false
 	return &finalization{round}

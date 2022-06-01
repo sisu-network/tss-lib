@@ -4,7 +4,7 @@
 // terms governing use, modification, and redistribution, is contained in the
 // file LICENSE at the root of the source code distribution tree.
 
-package presign
+package signing
 
 import (
 	"errors"
@@ -23,14 +23,14 @@ func (round *round4) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
-	r4msg := NewPresignRound4Message(Pi, round.temp.deCommit)
-	round.temp.presignRound4Messages[i] = r4msg
+	r4msg := NewSignRound4Message(Pi, round.temp.deCommit)
+	round.temp.signRound4Messages[i] = r4msg
 	round.out <- r4msg
 	return nil
 }
 
 func (round *round4) Update() (bool, *tss.Error) {
-	for j, msg := range round.temp.presignRound4Messages {
+	for j, msg := range round.temp.signRound4Messages {
 		if round.ok[j] {
 			continue
 		}
@@ -43,7 +43,7 @@ func (round *round4) Update() (bool, *tss.Error) {
 }
 
 func (round *round4) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*PresignRound4Message); ok {
+	if _, ok := msg.Content().(*SignRound4Message); ok {
 		return msg.IsBroadcast()
 	}
 	return false

@@ -162,13 +162,14 @@ func TestBadMessageCulprits(t *testing.T) {
 	assert.Equal(t, 1, len(err2.Culprits()))
 	assert.Equal(t, pIDs[1], err2.Culprits()[0])
 	assert.Equal(t,
-		"task ecdsa-keygen, party {0,P[1]}, round 1, culprits [{1,2}]: message failed ValidateBasic: Type: ecdsa.keygen.KGRound1Message, From: {1,2}, To: all",
+		"task ecdsa-keygen, party {0,P[1]}, round 1, culprits [{1,2}]: message failed ValidateBasic: Type: KGRound1Message, From: {1,2}",
 		err2.Error())
 }
 
 func TestE2EConcurrentAndSaveFixtures(t *testing.T) {
 	setUp("info")
-	curve := "ecdsa"
+
+	// tss.SetCurve(elliptic.P256())
 
 	threshold := testThreshold
 	fixtures, pIDs, err := LoadKeygenTestFixtures(testParticipants)
@@ -261,7 +262,7 @@ keygen:
 						}
 						pShares = append(pShares, shareStruct)
 					}
-					uj, err := pShares[:threshold+1].ReConstruct(curve)
+					uj, err := pShares[:threshold+1].ReConstruct("ecdsa")
 					assert.NoError(t, err, "vss.ReConstruct should not throw error")
 
 					// uG test: u*G[j] == V[0]
@@ -279,7 +280,7 @@ keygen:
 					{
 						badShares := pShares[:threshold]
 						badShares[len(badShares)-1].Share.Set(big.NewInt(0))
-						uj, err := pShares[:threshold].ReConstruct(curve)
+						uj, err := pShares[:threshold].ReConstruct("ecdsa")
 						assert.NoError(t, err)
 						assert.NotEqual(t, parties[j].temp.ui, uj)
 						BigXjX, BigXjY := tss.EC("ecdsa").ScalarBaseMult(uj.Bytes())

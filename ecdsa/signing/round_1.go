@@ -8,10 +8,14 @@ package signing
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
-	common "github.com/sisu-network/tss-lib/common"
-	"github.com/sisu-network/tss-lib/ecdsa/presign"
+	"github.com/sisu-network/tss-lib/common"
+	"github.com/sisu-network/tss-lib/crypto"
+	"github.com/sisu-network/tss-lib/crypto/commitments"
+	"github.com/sisu-network/tss-lib/crypto/mta"
+	"github.com/sisu-network/tss-lib/ecdsa/keygen"
 	"github.com/sisu-network/tss-lib/tss"
 )
 
@@ -20,18 +24,9 @@ var (
 )
 
 // round 1 represents round 1 of the signing part of the GG18 ECDSA TSS spec (Gennaro, Goldfeder; 2018)
-func newRound1(params *tss.Parameters, presignData *presign.LocalPresignData, temp *localTempData, out chan<- tss.Message, end chan<- *common.ECSignature) tss.Round {
+func newRound1(params *tss.Parameters, key *keygen.LocalPartySaveData, data *SignatureData, temp *localTempData, out chan<- tss.Message, end chan<- *SignatureData) tss.Round {
 	return &round1{
-		&base{params, presignData, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
-}
-
-func calculateSi(data *presign.LocalPresignData, msg *big.Int) (sI *big.Int) {
-	N := tss.EC("ecdsa").Params().N
-	modN := common.ModInt(N)
-
-	kI, rSigmaI := new(big.Int).SetBytes(data.KI), new(big.Int).SetBytes(data.RSigmaI)
-	sI = modN.Add(modN.Mul(msg, kI), rSigmaI)
-	return
+		&base{params, key, data, temp, out, end, make([]bool, len(params.Parties().IDs())), false, 1}}
 }
 
 func (round *round1) Start() *tss.Error {
@@ -56,42 +51,101 @@ func (round *round1) Start() *tss.Error {
 	i := Pi.Index
 	round.ok[i] = true
 
-	round.temp.sI = calculateSi(round.presignData, round.temp.m)
+	gammaI := common.GetRandomPositiveInt(tss.EC("ecdsa").Params().N)
+	kI := common.GetRandomPositiveInt(tss.EC("ecdsa").Params().N)
+	round.temp.gammaI = gammaI
+	round.temp.r5AbortData.GammaI = gammaI.Bytes()
 
-	round.out <- NewSignRound1Message(round.PartyID(), calculateSi(round.presignData, round.temp.m))
+	gammaIG := crypto.ScalarBaseMult(tss.EC("ecdsa"), gammaI)
+	round.temp.gammaIG = gammaIG
 
+	cmt := commitments.NewHashCommitment(gammaIG.X(), gammaIG.Y())
+	round.temp.deCommit = cmt.D
+
+	// MtA round 1
+	paiPK := round.key.PaillierPKs[i]
+	cA, rA, err := paiPK.EncryptAndReturnRandomness(kI)
+	if err != nil {
+		return round.WrapError(err, Pi)
+	}
+
+	// set "k"-related temporary variables, also used for identified aborts later in the protocol
+	{
+		kIBz := kI.Bytes()
+		round.temp.KI = kIBz // now part of the OneRoundData struct
+		round.temp.r5AbortData.KI = kIBz
+		round.temp.r7AbortData.KI = kIBz
+		round.temp.cAKI = cA // used for the ZK proof in round 5
+		round.temp.rAKI = rA
+		round.temp.r7AbortData.KRandI = rA.Bytes()
+	}
+
+	for j, Pj := range round.Parties().IDs() {
+		if j == i {
+			continue
+		}
+		pi, err := mta.AliceInit("ecdsa", paiPK, kI, cA, rA, round.key.NTildej[j], round.key.H1j[j], round.key.H2j[j])
+		if err != nil {
+			return round.WrapError(fmt.Errorf("failed to init mta: %v", err))
+		}
+		r1msg1 := NewSignRound1Message1(Pj, round.PartyID(), cA, pi)
+		round.temp.signRound1Message1s[i] = r1msg1
+		round.temp.c1Is[j] = cA
+		round.out <- r1msg1
+	}
+
+	r1msg2 := NewSignRound1Message2(round.PartyID(), cmt.C)
+	round.temp.signRound1Message2s[i] = r1msg2
+	round.out <- r1msg2
 	return nil
 }
 
 func (round *round1) Update() (bool, *tss.Error) {
-	for j, msg1 := range round.temp.signRound1Message {
+	for j, msg1 := range round.temp.signRound1Message1s {
 		if round.ok[j] {
 			continue
 		}
 		if msg1 == nil || !round.CanAccept(msg1) {
 			return false, nil
 		}
+		msg2 := round.temp.signRound1Message2s[j]
+		if msg2 == nil || !round.CanAccept(msg2) {
+			return false, nil
+		}
 		round.ok[j] = true
 	}
-
 	return true, nil
 }
 
 func (round *round1) CanAccept(msg tss.ParsedMessage) bool {
-	if _, ok := msg.Content().(*SignRound1Message); ok {
+	if _, ok := msg.Content().(*SignRound1Message1); ok {
+		return !msg.IsBroadcast()
+	}
+	if _, ok := msg.Content().(*SignRound1Message2); ok {
 		return msg.IsBroadcast()
 	}
-
 	return false
 }
 
 func (round *round1) NextRound() tss.Round {
 	round.started = false
-	return &finalization{round}
+	return &round2{round}
 }
 
 // ----- //
 
+// helper to call into PrepareForSigning()
 func (round *round1) prepare() error {
+	i := round.PartyID().Index
+	xi, ks, bigXs := round.key.Xi, round.key.Ks, round.key.BigXj
+	if round.Threshold()+1 > len(ks) {
+		return fmt.Errorf("t+1=%d is not satisfied by the key count of %d", round.Threshold()+1, len(ks))
+	}
+	if wI, bigWs, err := PrepareForSigning(i, len(ks), xi, ks, bigXs); err != nil {
+		return err
+	} else {
+		round.temp.wI = wI
+		round.temp.bigWs = bigWs
+	}
 	return nil
 }
