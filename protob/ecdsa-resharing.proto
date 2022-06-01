@@ -6,9 +6,9 @@
 
 syntax = "proto3";
 
-option go_package = "github.com/sisu-network/tss-lib/eddsa/resharing";
+option go_package = "github.com/sisu-network/tss-lib/ecdsa/resharing";
 
-package eddsa.resharing;
+package ecdsa.resharing;
 
 import "protob/shared.proto";
 
@@ -16,14 +16,27 @@ import "protob/shared.proto";
  * The Round 1 data is broadcast to peers of the New Committee in this message.
  */
 message DGRound1Message {
-    ECPoint eddsa_pub = 1;
+    ECPoint ecdsa_pub = 1;
     bytes v_commitment = 2;
+}
+
+/*
+ * The Round 2 data is broadcast to other peers of the New Committee in this message.
+ */
+message DGRound2Message1 {
+    bytes paillier_n = 1;
+    repeated bytes paillier_proof = 2;
+    bytes n_tilde = 3;
+    bytes h1 = 4;
+    bytes h2 = 5;
+    repeated bytes dlnproof_1 = 6;
+    repeated bytes dlnproof_2 = 7;
 }
 
 /*
  * The Round 2 "ACK" is broadcast to peers of the Old Committee in this message.
  */
-message DGRound2Message {
+message DGRound2Message2 {
 }
 
 /*

@@ -42,10 +42,10 @@ func FinalizeGetAndVerifyFinalSig(
 		return nil, nil, FinalizeWrapError(errors.New("len(otherSIs) != T"), ourP)
 	}
 
-	N := tss.EC().Params().N
+	N := tss.EC("ecdsa").Params().N
 	modN := common.ModInt(N)
 
-	bigR, err := crypto.NewECPoint(tss.EC(),
+	bigR, err := crypto.NewECPoint(tss.EC("ecdsa"),
 		new(big.Int).SetBytes(presignData.BigR.GetX()),
 		new(big.Int).SetBytes(presignData.BigR.GetY()))
 	if err != nil {
@@ -64,14 +64,14 @@ func FinalizeGetAndVerifyFinalSig(
 		}
 
 		// prep for identify aborts in phase 7
-		bigRBarJ, err := crypto.NewECPoint(tss.EC(),
+		bigRBarJ, err := crypto.NewECPoint(tss.EC("ecdsa"),
 			new(big.Int).SetBytes(bigRBarJBz.GetX()),
 			new(big.Int).SetBytes(bigRBarJBz.GetY()))
 		if err != nil {
 			culprits = append(culprits, Pj)
 			continue
 		}
-		bigSI, err := crypto.NewECPoint(tss.EC(),
+		bigSI, err := crypto.NewECPoint(tss.EC("ecdsa"),
 			new(big.Int).SetBytes(bigSJBz.GetX()),
 			new(big.Int).SetBytes(bigSJBz.GetY()))
 		if err != nil {
@@ -178,7 +178,7 @@ func (round *finalization) Start() *tss.Error {
 	}
 
 	pk := &ecdsa.PublicKey{
-		Curve: tss.EC(),
+		Curve: tss.EC("ecdsa"),
 		X:     round.presignData.ECDSAPub.X(),
 		Y:     round.presignData.ECDSAPub.Y(),
 	}

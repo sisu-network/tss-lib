@@ -42,12 +42,12 @@ func (round *round1) Start() *tss.Error {
 	i := Pi.Index
 	round.ok[i] = true
 
-	gammaI := common.GetRandomPositiveInt(tss.EC().Params().N)
-	kI := common.GetRandomPositiveInt(tss.EC().Params().N)
+	gammaI := common.GetRandomPositiveInt(tss.EC("ecdsa").Params().N)
+	kI := common.GetRandomPositiveInt(tss.EC("ecdsa").Params().N)
 	round.temp.gammaI = gammaI
 	round.temp.r5AbortData.GammaI = gammaI.Bytes()
 
-	gammaIG := crypto.ScalarBaseMult(tss.EC(), gammaI)
+	gammaIG := crypto.ScalarBaseMult(tss.EC("ecdsa"), gammaI)
 	round.temp.gammaIG = gammaIG
 
 	cmt := commitments.NewHashCommitment(gammaIG.X(), gammaIG.Y())
@@ -74,7 +74,7 @@ func (round *round1) Start() *tss.Error {
 		if j == i {
 			continue
 		}
-		pi, err := mta.AliceInit(paiPK, kI, cA, rA, round.key.NTildej[j], round.key.H1j[j], round.key.H2j[j])
+		pi, err := mta.AliceInit("ecdsa", paiPK, kI, cA, rA, round.key.NTildej[j], round.key.H1j[j], round.key.H2j[j])
 		if err != nil {
 			return round.WrapError(fmt.Errorf("failed to init mta: %v", err))
 		}

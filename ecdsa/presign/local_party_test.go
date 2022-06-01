@@ -105,12 +105,12 @@ presign:
 
 				// bigR is stored as bytes for the OneRoundData protobuf struct
 				bigRX, bigRY := new(big.Int).SetBytes(parties[0].temp.BigR.GetX()), new(big.Int).SetBytes(parties[0].temp.BigR.GetY())
-				bigR := crypto.NewECPointNoCurveCheck(tss.EC(), bigRX, bigRY)
+				bigR := crypto.NewECPointNoCurveCheck(tss.EC("ecdsa"), bigRX, bigRY)
 
 				r := parties[0].temp.rI.X()
 				fmt.Printf("sign result: R(%s, %s), r=%s\n", bigR.X().String(), bigR.Y().String(), r.String())
 
-				modN := common.ModInt(tss.EC().Params().N)
+				modN := common.ModInt(tss.EC("ecdsa").Params().N)
 
 				// BEGIN check s correctness
 				sumS := big.NewInt(0)
@@ -126,7 +126,7 @@ presign:
 				// BEGIN ECDSA verify
 				pkX, pkY := keys[0].ECDSAPub.X(), keys[0].ECDSAPub.Y()
 				pk := ecdsa.PublicKey{
-					Curve: tss.EC(),
+					Curve: tss.EC("ecdsa"),
 					X:     pkX,
 					Y:     pkY,
 				}
@@ -148,7 +148,7 @@ presign:
 }
 
 func calculateSi(data *LocalPresignData, msg *big.Int) (sI *big.Int) {
-	N := tss.EC().Params().N
+	N := tss.EC("ecdsa").Params().N
 	modN := common.ModInt(N)
 
 	kI, rSigmaI := new(big.Int).SetBytes(data.KI), new(big.Int).SetBytes(data.RSigmaI)

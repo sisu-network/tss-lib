@@ -49,7 +49,7 @@ func (round *finalization) Start() *tss.Error {
 	round.data.Signature = signature
 
 	pk := edwards.PublicKey{
-		Curve: tss.EC(),
+		Curve: tss.EC("eddsa"),
 		X:     round.key.EDDSAPub.X(),
 		Y:     round.key.EDDSAPub.Y(),
 	}

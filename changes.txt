@@ -1,0 +1,5 @@
+1) Protobuf files has package name (e.g. ecdsa.presign) to avoid conflicting namespace (https://developers.google.com/protocol-buffers/docs/reference/go/faq#namespace-conflict)
+
+2) Presign is a new stage for ecdsa jobs.
+
+2) tss.EC() function now takes a variable passed into it to indicate if the caller wants to user Ecdsa or Eddsa curve.

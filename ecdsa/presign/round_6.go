@@ -30,7 +30,7 @@ func (round *round6) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
-	bigR, _ := crypto.NewECPointFromProtobuf(round.temp.BigR)
+	bigR, _ := crypto.NewECPointFromProtobuf("ecdsa", round.temp.BigR)
 
 	sigmaI := round.temp.sigmaI
 	defer func() {
@@ -81,7 +81,7 @@ func (round *round6) Start() *tss.Error {
 			H2:         round.key.H2j[Pj.Index],
 			NTilde:     round.key.NTildej[Pj.Index], // maybe i
 		}
-		if !pdlWSlackPf.Verify(pdlWSlackStatement) {
+		if !pdlWSlackPf.Verify("ecdsa", pdlWSlackStatement) {
 			errs[Pj] = fmt.Errorf("failed to verify ZK proof of consistency between R_i and E_i(k_i) for P %d", j)
 		}
 	}
@@ -95,7 +95,7 @@ func (round *round6) Start() *tss.Error {
 		return round.WrapError(multiErr, culprits...)
 	}
 	{
-		ec := tss.EC()
+		ec := tss.EC("ecdsa")
 		gX, gY := ec.Params().Gx, ec.Params().Gy
 		if bigRBarJProducts.X().Cmp(gX) != 0 || bigRBarJProducts.Y().Cmp(gY) != 0 {
 			round.abortingT5 = true
@@ -115,7 +115,7 @@ func (round *round6) Start() *tss.Error {
 	// R^sigma_i proof used in type 7 aborts
 	bigSI := bigR.ScalarMult(sigmaI)
 	{
-		sigmaPf, err := zkp.NewECSigmaIProof(tss.EC(), sigmaI, bigR, bigSI)
+		sigmaPf, err := zkp.NewECSigmaIProof(tss.EC("ecdsa"), sigmaI, bigR, bigSI)
 		if err != nil {
 			return round.WrapError(err, Pi)
 		}
@@ -124,12 +124,12 @@ func (round *round6) Start() *tss.Error {
 		round.temp.r7AbortData.EcddhProofZ = sigmaPf.Z.Bytes()
 	}
 
-	h, err := crypto.ECBasePoint2(tss.EC())
+	h, err := crypto.ECBasePoint2(tss.EC("ecdsa"))
 	if err != nil {
 		return round.WrapError(err, Pi)
 	}
 	TI, lI := round.temp.TI, round.temp.lI
-	stPf, err := zkp.NewSTProof(TI, bigR, h, sigmaI, lI)
+	stPf, err := zkp.NewSTProof("ecdsa", TI, bigR, h, sigmaI, lI)
 	if err != nil {
 		return round.WrapError(err, Pi)
 	}

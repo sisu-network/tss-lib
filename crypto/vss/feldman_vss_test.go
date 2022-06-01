@@ -20,39 +20,40 @@ import (
 func TestCheckIndexesDup(t *testing.T) {
 	indexes := make([]*big.Int, 0)
 	for i := 0; i < 1000; i++ {
-		indexes = append(indexes, common.GetRandomPositiveInt(tss.EC().Params().N))
+		indexes = append(indexes, common.GetRandomPositiveInt(tss.EC("").Params().N))
 	}
-	_, e := CheckIndexes(tss.EC(), indexes)
+	_, e := CheckIndexes(tss.EC(""), indexes)
 	assert.NoError(t, e)
 
 	indexes = append(indexes, indexes[99])
-	_, e = CheckIndexes(tss.EC(), indexes)
+	_, e = CheckIndexes(tss.EC(""), indexes)
 	assert.Error(t, e)
 }
 
 func TestCheckIndexesZero(t *testing.T) {
 	indexes := make([]*big.Int, 0)
 	for i := 0; i < 1000; i++ {
-		indexes = append(indexes, common.GetRandomPositiveInt(tss.EC().Params().N))
+		indexes = append(indexes, common.GetRandomPositiveInt(tss.EC("").Params().N))
 	}
-	_, e := CheckIndexes(tss.EC(), indexes)
+	_, e := CheckIndexes(tss.EC(""), indexes)
 	assert.NoError(t, e)
 
-	indexes = append(indexes, tss.EC().Params().N)
-	_, e = CheckIndexes(tss.EC(), indexes)
+	indexes = append(indexes, tss.EC("").Params().N)
+	_, e = CheckIndexes(tss.EC(""), indexes)
 	assert.Error(t, e)
 }
 func TestCreate(t *testing.T) {
+	curve := "ecdsa"
 	num, threshold := 5, 3
 
-	secret := common.GetRandomPositiveInt(tss.EC().Params().N)
+	secret := common.GetRandomPositiveInt(tss.EC(curve).Params().N)
 
 	ids := make([]*big.Int, 0)
 	for i := 0; i < num; i++ {
-		ids = append(ids, common.GetRandomPositiveInt(tss.EC().Params().N))
+		ids = append(ids, common.GetRandomPositiveInt(tss.EC(curve).Params().N))
 	}
 
-	vs, _, err := Create(threshold, secret, ids)
+	vs, _, err := Create(curve, threshold, secret, ids)
 	assert.Nil(t, err)
 
 	assert.Equal(t, threshold+1, len(vs))
@@ -71,45 +72,47 @@ func TestCreate(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
+	curve := "ecdsa"
 	num, threshold := 5, 3
 
-	secret := common.GetRandomPositiveInt(tss.EC().Params().N)
+	secret := common.GetRandomPositiveInt(tss.EC(curve).Params().N)
 
 	ids := make([]*big.Int, 0)
 	for i := 0; i < num; i++ {
-		ids = append(ids, common.GetRandomPositiveInt(tss.EC().Params().N))
+		ids = append(ids, common.GetRandomPositiveInt(tss.EC(curve).Params().N))
 	}
 
-	vs, shares, err := Create(threshold, secret, ids)
+	vs, shares, err := Create(curve, threshold, secret, ids)
 	assert.NoError(t, err)
 
 	for i := 0; i < num; i++ {
-		assert.True(t, shares[i].Verify(threshold, vs))
+		assert.True(t, shares[i].Verify(curve, threshold, vs))
 	}
 }
 
 func TestReconstruct(t *testing.T) {
+	curve := "ecdsa"
 	num, threshold := 5, 3
 
-	secret := common.GetRandomPositiveInt(tss.EC().Params().N)
+	secret := common.GetRandomPositiveInt(tss.EC(curve).Params().N)
 
 	ids := make([]*big.Int, 0)
 	for i := 0; i < num; i++ {
-		ids = append(ids, common.GetRandomPositiveInt(tss.EC().Params().N))
+		ids = append(ids, common.GetRandomPositiveInt(tss.EC(curve).Params().N))
 	}
 
-	_, shares, err := Create(threshold, secret, ids)
+	_, shares, err := Create(curve, threshold, secret, ids)
 	assert.NoError(t, err)
 
-	secret2, err2 := shares[:threshold-1].ReConstruct()
+	secret2, err2 := shares[:threshold-1].ReConstruct(curve)
 	assert.Error(t, err2) // not enough shares to satisfy the threshold
 	assert.Nil(t, secret2)
 
-	secret3, err3 := shares[:threshold].ReConstruct()
+	secret3, err3 := shares[:threshold].ReConstruct(curve)
 	assert.NoError(t, err3)
 	assert.NotZero(t, secret3)
 
-	secret4, err4 := shares[:num].ReConstruct()
+	secret4, err4 := shares[:num].ReConstruct(curve)
 	assert.NoError(t, err4)
 	assert.NotZero(t, secret4)
 }

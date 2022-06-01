@@ -29,7 +29,7 @@ func (round *round7) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
-	N := tss.EC().Params().N
+	N := tss.EC("ecdsa").Params().N
 	modN := common.ModInt(N)
 
 	culprits := make([]*tss.PartyID, 0, len(round.temp.presignRound6Messages))
@@ -54,7 +54,7 @@ func (round *round7) Start() *tss.Error {
 
 			// Check that value gamma_j (in MtA) is consistent with bigGamma_j that is de-committed in Phase 4
 			gammaJ := new(big.Int).SetBytes(r6msg.GetGammaI())
-			gammaJG := crypto.ScalarBaseMult(tss.EC(), gammaJ)
+			gammaJG := crypto.ScalarBaseMult(tss.EC("ecdsa"), gammaJ)
 			if !gammaJG.Equals(round.temp.bigGammaJs[j]) {
 				culprits = append(culprits, Pj)
 				continue
@@ -92,9 +92,9 @@ func (round *round7) Start() *tss.Error {
 
 	// bigR is stored as bytes for the OneRoundData protobuf struct
 	bigRX, bigRY := new(big.Int).SetBytes(round.temp.BigR.GetX()), new(big.Int).SetBytes(round.temp.BigR.GetY())
-	bigR := crypto.NewECPointNoCurveCheck(tss.EC(), bigRX, bigRY)
+	bigR := crypto.NewECPointNoCurveCheck(tss.EC("ecdsa"), bigRX, bigRY)
 
-	h, err := crypto.ECBasePoint2(tss.EC())
+	h, err := crypto.ECBasePoint2(tss.EC("ecdsa"))
 	if err != nil {
 		return round.WrapError(err, Pi)
 	}
@@ -135,7 +135,7 @@ func (round *round7) Start() *tss.Error {
 				multiErr = multierror.Append(multiErr, err)
 				continue
 			}
-			if ok := stProof.Verify(bigSI, TI, bigR, h); !ok {
+			if ok := stProof.Verify("ecdsa", bigSI, TI, bigR, h); !ok {
 				culprits = append(culprits, Pj)
 				multiErr = multierror.Append(multiErr, errors.New("STProof verify failure"))
 				continue

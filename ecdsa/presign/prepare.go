@@ -17,7 +17,7 @@ import (
 
 // PrepareForPresigning(), GG18Spec (11) Fig. 14
 func PrepareForPresigning(i, pax int, xi *big.Int, ks []*big.Int, bigXs []*crypto.ECPoint) (wi *big.Int, bigWs []*crypto.ECPoint, err error) {
-	modQ := common.ModInt(tss.EC().Params().N)
+	modQ := common.ModInt(tss.EC("ecdsa").Params().N)
 	if len(ks) != len(bigXs) {
 		panic(fmt.Errorf("PrepareForSigning: len(ks) != len(bigXs) (%d != %d)", len(ks), len(bigXs)))
 	}
@@ -65,7 +65,7 @@ func PrepareForPresigning(i, pax int, xi *big.Int, ks []*big.Int, bigXs []*crypt
 	}
 
 	// assertion: g^w_i == W_i
-	if !crypto.ScalarBaseMult(tss.EC(), wi).Equals(bigWs[i]) {
+	if !crypto.ScalarBaseMult(tss.EC("ecdsa"), wi).Equals(bigWs[i]) {
 		err = fmt.Errorf("assertion failed: g^w_i == W_i")
 		return
 	}

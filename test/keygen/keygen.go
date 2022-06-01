@@ -161,7 +161,7 @@ func DoKeygen(t, n int) {
 	KEYS = make([]*big.Int, n)
 
 	for i := range KEYS {
-		KEYS[i] = common.GetRandomPositiveInt(tss.EC().Params().N)
+		KEYS[i] = common.GetRandomPositiveInt(tss.EC("ecdsa").Params().N)
 	}
 
 	if _, err := os.Stat(PREPARAMS_FILE); os.IsNotExist(err) {

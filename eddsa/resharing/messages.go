@@ -59,7 +59,7 @@ func (m *DGRound1Message) ValidateBasic() bool {
 }
 
 func (m *DGRound1Message) UnmarshalEDDSAPub() (*crypto.ECPoint, error) {
-	return crypto.NewECPointFromProtobuf(m.GetEddsaPub())
+	return crypto.NewECPointFromProtobuf("eddsa", m.GetEddsaPub())
 }
 
 func (m *DGRound1Message) UnmarshalVCommitment() *big.Int {

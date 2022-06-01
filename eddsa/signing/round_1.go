@@ -35,10 +35,10 @@ func (round *round1) Start() *tss.Error {
 	i := round.PartyID().Index
 
 	// 1. select ri
-	ri := common.GetRandomPositiveInt(tss.EC().Params().N)
+	ri := common.GetRandomPositiveInt(tss.EC("eddsa").Params().N)
 
 	// 2. make commitment
-	pointRi := crypto.ScalarBaseMult(tss.EC(), ri)
+	pointRi := crypto.ScalarBaseMult(tss.EC("eddsa"), ri)
 	cmt := commitments.NewHashCommitment(pointRi.X(), pointRi.Y())
 
 	// 3. store r1 message pieces
