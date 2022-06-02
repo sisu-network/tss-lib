@@ -20,7 +20,7 @@ const (
 	testFixtureFileFormat = "signing_data_%d.json"
 )
 
-type OneRoundDataWrapper struct {
+type oneRoundDataWrapper struct {
 	PartyId    string
 	KeygenData keygen.LocalPartySaveData
 	OneRound   *SignatureData_OneRoundData
@@ -54,7 +54,7 @@ func tryWriteTestFixtureFile(t *testing.T, index int, pid string, data *Signatur
 		if err != nil {
 			assert.NoErrorf(t, err, "unable to open fixture file %s for writing", fixtureFileName)
 		}
-		bz, err := json.Marshal(&OneRoundDataWrapper{
+		bz, err := json.Marshal(&oneRoundDataWrapper{
 			PartyId:    pid,
 			KeygenData: keygenData,
 			OneRound:   data,
@@ -73,8 +73,8 @@ func tryWriteTestFixtureFile(t *testing.T, index int, pid string, data *Signatur
 	//
 }
 
-func loadSigningData(n int) ([]*OneRoundDataWrapper, tss.SortedPartyIDs) {
-	fixtures := make([]*OneRoundDataWrapper, n)
+func loadSigningData(n int) ([]*oneRoundDataWrapper, tss.SortedPartyIDs) {
+	fixtures := make([]*oneRoundDataWrapper, n)
 	for i := 0; i < n; i++ {
 		fixtureFilePath := makeTestFixtureFilePath(i)
 		bz, err := ioutil.ReadFile(fixtureFilePath)
@@ -82,7 +82,7 @@ func loadSigningData(n int) ([]*OneRoundDataWrapper, tss.SortedPartyIDs) {
 			panic(err)
 		}
 
-		data := new(OneRoundDataWrapper)
+		data := new(oneRoundDataWrapper)
 		err = json.Unmarshal(bz, data)
 		if err != nil {
 			panic(err)
