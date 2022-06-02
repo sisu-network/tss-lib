@@ -182,6 +182,7 @@ func (round *round7) Start() *tss.Error {
 	// If we are in one-round signing mode (msg is nil), we will exit out with the current state here and we are done.
 	round.temp.T = int32(len(round.Parties().IDs()) - 1)
 	round.data.OneRoundData = &round.temp.SignatureData_OneRoundData
+	round.data.OneRoundData.PartyId = Pi.Id
 	if round.temp.m == nil {
 		round.end <- round.data
 		for j := range round.ok {

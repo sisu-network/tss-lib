@@ -21,7 +21,6 @@ const (
 )
 
 type oneRoundDataWrapper struct {
-	PartyId    string
 	KeygenData keygen.LocalPartySaveData
 	OneRound   *SignatureData_OneRoundData
 }
@@ -54,8 +53,10 @@ func tryWriteTestFixtureFile(t *testing.T, index int, pid string, data *Signatur
 		if err != nil {
 			assert.NoErrorf(t, err, "unable to open fixture file %s for writing", fixtureFileName)
 		}
+
+		fmt.Println("Party id = ", data.PartyId)
+
 		bz, err := json.Marshal(&oneRoundDataWrapper{
-			PartyId:    pid,
 			KeygenData: keygenData,
 			OneRound:   data,
 		})
@@ -95,7 +96,7 @@ func loadSigningData(n int) ([]*oneRoundDataWrapper, tss.SortedPartyIDs) {
 	for i := 0; i < len(fixtures); i++ {
 		key := fixtures[i].KeygenData
 
-		partyIDs[i] = tss.NewPartyID(fixtures[i].PartyId, fixtures[i].PartyId, key.ShareID)
+		partyIDs[i] = tss.NewPartyID(fixtures[i].OneRound.PartyId, fixtures[i].OneRound.PartyId, key.ShareID)
 	}
 
 	sortedPIDs := tss.SortPartyIDs(partyIDs)
