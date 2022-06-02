@@ -144,8 +144,32 @@ func NewLocalPartyWithOneRoundSign(
 	return NewLocalParty(nil, params, key, out, end)
 }
 
+// Called this function with pre-processing data that was generated before.
+func NewLocalPartyWithSavedData(
+	msg *big.Int,
+	params *tss.Parameters,
+	oneRoundData *SignatureData_OneRoundData,
+	out chan<- tss.Message,
+	end chan<- *SignatureData,
+) tss.Party {
+	p := NewLocalParty(msg, params, keygen.LocalPartySaveData{}, out, end)
+	p.(*LocalParty).data.OneRoundData = oneRoundData
+
+	return p
+}
+
 func (p *LocalParty) FirstRound() tss.Round {
-	return newRound1(p.params, &p.keys, &p.data, &p.temp, p.out, p.end)
+	if p.data.OneRoundData == nil {
+		return newRound1(p.params, &p.keys, &p.data, &p.temp, p.out, p.end)
+	}
+
+	r := &round7{&round6{&round5{&round4{&round3{&round2{&round1{
+		&base{p.params, &p.keys, &p.data, &p.temp, p.out, p.end, make([]bool, len(p.params.Parties().IDs())), false, 1},
+	}}}}}, false}, false}
+
+	r.data.OneRoundData = p.data.OneRoundData
+
+	return r
 }
 
 func (p *LocalParty) Start() *tss.Error {

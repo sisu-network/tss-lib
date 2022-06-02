@@ -29,6 +29,12 @@ func (round *round7) Start() *tss.Error {
 	Pi := round.PartyID()
 	i := Pi.Index
 
+	// Shortcut this round as we have OneRoundData from preprocessing steps before.
+	if round.data.OneRoundData != nil {
+		round.broadcastSi(Pi.Index)
+		return nil
+	}
+
 	N := tss.EC("ecdsa").Params().N
 	modN := common.ModInt(N)
 
@@ -185,13 +191,19 @@ func (round *round7) Start() *tss.Error {
 	}
 
 	// Continuing the full online protocol.
+	round.broadcastSi(Pi.Index)
+
+	return nil
+}
+
+func (round *round7) broadcastSi(index int) {
+	// Continuing the full online protocol.
 	sI := FinalizeGetOurSigShare(round.data, round.temp.m)
 	round.temp.sI = sI
 
 	r7msg := NewSignRound7MessageSuccess(round.PartyID(), sI)
-	round.temp.signRound7Messages[i] = r7msg
+	round.temp.signRound7Messages[index] = r7msg
 	round.out <- r7msg
-	return nil
 }
 
 func (round *round7) Update() (bool, *tss.Error) {
