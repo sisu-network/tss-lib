@@ -96,6 +96,7 @@ func NewLocalParty(
 	msg *big.Int,
 	params *tss.Parameters,
 	key keygen.LocalPartySaveData,
+	oneRoundData *SignatureData_OneRoundData,
 	out chan<- tss.Message,
 	end chan<- *SignatureData,
 ) tss.Party {
@@ -131,6 +132,9 @@ func NewLocalParty(
 	p.temp.bigGammaJs = make([]*crypto.ECPoint, partyCount)
 	p.temp.r5AbortData.AlphaIJ = make([][]byte, partyCount)
 	p.temp.r5AbortData.BetaJI = make([][]byte, partyCount)
+
+	// One round data
+	p.data.OneRoundData = oneRoundData
 	return p
 }
 
@@ -141,21 +145,7 @@ func NewLocalPartyWithOneRoundSign(
 	out chan<- tss.Message,
 	end chan<- *SignatureData,
 ) tss.Party {
-	return NewLocalParty(nil, params, key, out, end)
-}
-
-// Called this function with pre-processing data that was generated before.
-func NewLocalPartyWithSavedData(
-	msg *big.Int,
-	params *tss.Parameters,
-	oneRoundData *SignatureData_OneRoundData,
-	out chan<- tss.Message,
-	end chan<- *SignatureData,
-) tss.Party {
-	p := NewLocalParty(msg, params, keygen.LocalPartySaveData{}, out, end)
-	p.(*LocalParty).data.OneRoundData = oneRoundData
-
-	return p
+	return NewLocalParty(nil, params, key, nil, out, end)
 }
 
 func (p *LocalParty) FirstRound() tss.Round {
@@ -174,12 +164,16 @@ func (p *LocalParty) FirstRound() tss.Round {
 
 func (p *LocalParty) Start() *tss.Error {
 	return tss.BaseStart(p, TaskName, func(round tss.Round) *tss.Error {
-		round1, ok := round.(*round1)
-		if !ok {
-			return round.WrapError(errors.New("unable to Start(). party is in an unexpected round"))
-		}
-		if err := round1.prepare(); err != nil {
-			return round.WrapError(err)
+		if p.data.OneRoundData == nil {
+			round1, ok := round.(*round1)
+			if !ok {
+				return round.WrapError(errors.New("unable to Start(). party is in an unexpected round"))
+			}
+			if err := round1.prepare(); err != nil {
+				return round.WrapError(err)
+			}
+		} else {
+			// Do nothing for now.
 		}
 		return nil
 	})

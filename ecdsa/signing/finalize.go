@@ -77,6 +77,8 @@ func FinalizeGetAndVerifyFinalSig(
 		bigRBarJBz := data.GetBigRBarJ()[Pj.Id]
 		bigSJBz := data.GetBigSJ()[Pj.Id]
 		if Pj == nil || bigRBarJBz == nil || bigSJBz == nil {
+			fmt.Println("bigSJBz = ", Pj, bigRBarJBz, bigSJBz)
+
 			return nil, nil, FinalizeWrapError(errors.New("in loop: Pj or map value s_i is nil"), Pj)
 		}
 
