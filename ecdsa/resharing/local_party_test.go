@@ -211,6 +211,9 @@ signing:
 			if atomic.LoadInt32(&signEnded) == int32(len(signPIDs)) {
 				t.Logf("Signing done. Received sign data from %d participants", signEnded)
 
+				fmt.Println("Old key = ", oldKeys[0].ECDSAPub.X(), oldKeys[0].ECDSAPub.Y())
+				fmt.Println("New key = ", signKeys[0].ECDSAPub.X(), signKeys[0].ECDSAPub.Y())
+
 				// BEGIN ECDSA verify
 				pkX, pkY := signKeys[0].ECDSAPub.X(), signKeys[0].ECDSAPub.Y()
 				pk := ecdsa.PublicKey{
